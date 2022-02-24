@@ -1,0 +1,6 @@
+Different gaits - display emotions 
+    mad - stomping, wide movements
+    sneaky - low on the ground, very small movements
+    stumbly - bends a leg an falls a bit into poggers recovery
+shaky
+

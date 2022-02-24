@@ -1,0 +1,10 @@
+lengthX = p
+lengthY = o
+
+width = w
+motor1 = a
+motor2 = b
+motor3 = c
+joint1 = x
+joint2 = y
+joint3 = z

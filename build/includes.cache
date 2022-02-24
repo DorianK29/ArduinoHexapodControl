@@ -1,0 +1,87 @@
+[
+  {
+    "Sourcefile": null,
+    "Include": "",
+    "Includepath": "C:\\Users\\Dorian\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.4\\cores\\arduino"
+  },
+  {
+    "Sourcefile": null,
+    "Include": "",
+    "Includepath": "C:\\Users\\Dorian\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.4\\variants\\mega"
+  },
+  {
+    "Sourcefile": "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\build\\sketch\\robot_arduino.cpp.cpp",
+    "Include": "hexapod.h",
+    "Includepath": "C:\\Users\\Dorian\\Documents\\Arduino\\libraries\\Hexapod"
+  },
+  {
+    "Sourcefile": "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\build\\sketch\\robot_arduino.cpp.cpp",
+    "Include": "Servo.h",
+    "Includepath": "C:\\Users\\Dorian\\Downloads\\arduino-nightly\\libraries\\Servo\\src"
+  },
+  {
+    "Sourcefile": "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\build\\sketch\\robot_arduino.cpp.cpp",
+    "Include": "SoftwareSerial.h",
+    "Includepath": "C:\\Users\\Dorian\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.4\\libraries\\SoftwareSerial\\src"
+  },
+  {
+    "Sourcefile": "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\build\\sketch\\robot_arduino.cpp.cpp",
+    "Include": "StringSplitter.h",
+    "Includepath": "C:\\Users\\Dorian\\Documents\\Arduino\\libraries\\StringSplitter\\src"
+  },
+  {
+    "Sourcefile": "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\build\\sketch\\robot_arduino.cpp.cpp",
+    "Include": "EEPROM.h",
+    "Includepath": "C:\\Users\\Dorian\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.4\\libraries\\EEPROM\\src"
+  },
+  {
+    "Sourcefile": "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\build\\sketch\\robot_arduino.cpp.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "C:\\Users\\Dorian\\Downloads\\arduino-nightly\\libraries\\Servo\\src\\avr\\Servo.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "C:\\Users\\Dorian\\Downloads\\arduino-nightly\\libraries\\Servo\\src\\mbed\\Servo.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "C:\\Users\\Dorian\\Downloads\\arduino-nightly\\libraries\\Servo\\src\\megaavr\\Servo.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "C:\\Users\\Dorian\\Downloads\\arduino-nightly\\libraries\\Servo\\src\\nrf52\\Servo.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "C:\\Users\\Dorian\\Downloads\\arduino-nightly\\libraries\\Servo\\src\\sam\\Servo.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "C:\\Users\\Dorian\\Downloads\\arduino-nightly\\libraries\\Servo\\src\\samd\\Servo.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "C:\\Users\\Dorian\\Downloads\\arduino-nightly\\libraries\\Servo\\src\\stm32f4\\Servo.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "C:\\Users\\Dorian\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.4\\libraries\\SoftwareSerial\\src\\SoftwareSerial.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "C:\\Users\\Dorian\\Documents\\Arduino\\libraries\\StringSplitter\\src\\StringSplitter.cpp",
+    "Include": "",
+    "Includepath": null
+  }
+]
