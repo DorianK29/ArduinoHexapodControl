@@ -39,36 +39,54 @@ int bluetooth = 44;
 // ARDUINO: TODO: real pins
 #line 38 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
 void initServo();
-#line 61 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
+#line 79 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
 leg& legSwitch(int i);
-#line 88 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
+#line 106 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
 void leg_angle(int legNum);
-#line 120 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
+#line 138 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
 void legRotation(int j, bool backwards);
-#line 133 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
+#line 151 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
 void move();
-#line 176 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
+#line 194 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
 void stance(char stance);
-#line 200 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
+#line 218 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
 void angleFix(leg *Leg, bool minus);
-#line 210 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
+#line 228 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
 void legWrite(leg *Leg, int legNum);
-#line 285 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
+#line 305 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
 void servoWrite();
-#line 293 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
+#line 313 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
 void readMessage();
-#line 327 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
+#line 347 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
 void sendMessage();
-#line 351 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
+#line 371 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
 void setup();
-#line 378 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
+#line 398 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
 void loop();
 #line 38 "c:\\Users\\Dorian\\Documents\\cad\\zavrsni rad\\calc\\robot_arduino.cpp"
 void initServo()
 {
-    leg1.motor1.servo.attach(22);
-    leg1.motor2.servo.attach(24);
-    leg1.motor3.servo.attach(26);
+    // leg1.motor1.servo.attach(22);
+    // leg1.motor2.servo.attach(24);
+    // leg1.motor3.servo.attach(26);
+    // leg2.motor1.servo.attach(23);
+    // leg2.motor2.servo.attach(25);
+    // leg2.motor3.servo.attach(27);
+    // leg3.motor1.servo.attach(28);
+    // leg3.motor2.servo.attach(30);
+    // leg3.motor3.servo.attach(32);
+    // leg4.motor1.servo.attach(29);
+    // leg4.motor2.servo.attach(31);
+    // leg4.motor3.servo.attach(33);
+    // leg5.motor1.servo.attach(34);
+    // leg5.motor2.servo.attach(36);
+    // leg5.motor3.servo.attach(38);
+    // leg6.motor1.servo.attach(35);
+    // leg6.motor2.servo.attach(37);
+    // leg6.motor3.servo.attach(39);
+    leg1.motor1.servo.attach(34);
+    leg1.motor2.servo.attach(36);
+    leg1.motor3.servo.attach(38);
     leg2.motor1.servo.attach(23);
     leg2.motor2.servo.attach(25);
     leg2.motor3.servo.attach(27);
@@ -78,9 +96,9 @@ void initServo()
     leg4.motor1.servo.attach(29);
     leg4.motor2.servo.attach(31);
     leg4.motor3.servo.attach(33);
-    leg5.motor1.servo.attach(34);
-    leg5.motor2.servo.attach(36);
-    leg5.motor3.servo.attach(38);
+    leg5.motor1.servo.attach(22);
+    leg5.motor2.servo.attach(24);
+    leg5.motor3.servo.attach(26);
     leg6.motor1.servo.attach(35);
     leg6.motor2.servo.attach(37);
     leg6.motor3.servo.attach(39);
@@ -228,12 +246,12 @@ void stance(char stance)
 // Leg angle fix CATIA to irl model
 void angleFix(leg *Leg, bool minus)
 {
-
-    Leg->motor1.angle += 90 * pow(-1, minus);
+    Leg->motor1.angle = 90 - Leg->motor1.angle;
     if (Leg == &leg2 || Leg == &leg4 || Leg == &leg6) // for legs 2 4 6 motors 2 and 3 are already positive so no need to change
         return;
     Leg->motor2.angle += 90 * pow(-1, minus);
     Leg->motor3.angle += 180 * pow(-1, minus);
+    Leg->motor3.angle = 180 + Leg->motor3.angle * pow(-1, !minus);
 }
 
 void legWrite(leg *Leg, int legNum)
@@ -255,6 +273,8 @@ void legWrite(leg *Leg, int legNum)
     Serial.print(Leg->motor2.angle);
     Serial.print(" motor3: ");
     Serial.println(Leg->motor3.angle);
+
+    // servoWait(legNum);
 }
 
 // ARDUINO: TODO: check servo.read output, change accordingly
@@ -301,7 +321,7 @@ void servoWait(int legNum = 0)
             }
         }
         wait = waiting;
-        delay(100);
+        delay(250);
     } while (wait);
     if (legNum == 0)
         for (int legN = 1; legN <= 6; legN++)
@@ -374,7 +394,7 @@ void sendMessage()
 }
 
 void legValues();
-
+Servo tes;
 // TODO: bluetooth variable change
 // TODO: figure out range
 void setup()
@@ -391,9 +411,9 @@ void setup()
     //  cin >> mode;
 
     Serial.println("Startup");
-
-    mode = 3;
-    steps = 20; // TODO: figure out best num
+    tes.attach(47);
+    mode = 1;
+    steps = 10; // TODO: figure out best num
     // max range = -1 = abs(motor1.max) + abs(motor1.min)
     range = -1;  // useless?
     width = 120; // APP:
@@ -448,6 +468,7 @@ void loop()
         break;
     case 1:
         // walk
+        stance('n');
         move();
         // mode++;
         break;
