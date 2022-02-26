@@ -1,4 +1,4 @@
 /desktop.ini
 /kote.psd
-/old/
-/build/
+.build/
+.vscode/
