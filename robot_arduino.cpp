@@ -76,23 +76,22 @@ void initServo()
     leg1.motor1.servo.attach(34);
     leg1.motor2.servo.attach(36);
     leg1.motor3.servo.attach(38);
-
-    leg3.motor1.servo.attach(28);
-    leg3.motor2.servo.attach(30);
-    leg3.motor3.servo.attach(32);
-    leg4.motor1.servo.attach(29);
-    leg4.motor2.servo.attach(31);
-    leg4.motor3.servo.attach(33);
-    leg6.motor1.servo.attach(35);
-    leg6.motor2.servo.attach(37);
-    leg6.motor3.servo.attach(39);
-    leg5.motor1.servo.attach(22);
-    leg5.motor2.servo.attach(24);
-    leg5.motor3.servo.attach(26);
-
     leg2.motor1.servo.attach(23);
     leg2.motor2.servo.attach(25);
     leg2.motor3.servo.attach(27);
+    leg3.motor1.servo.attach(28);
+    leg3.motor2.servo.attach(30);
+    leg3.motor3.servo.attach(32);
+    leg5.motor1.servo.attach(22);
+    leg5.motor2.servo.attach(24);
+    leg5.motor3.servo.attach(26);
+    leg6.motor1.servo.attach(35);
+    leg6.motor2.servo.attach(37);
+    leg6.motor3.servo.attach(39);
+
+    leg4.motor1.servo.attach(29);
+    leg4.motor2.servo.attach(31);
+    leg4.motor3.servo.attach(33);
 }
 
 // leg switch case
@@ -432,9 +431,9 @@ void loop()
     // else
     //     angle = 90;
 
-    // // leg2.motor1.servo.write(angle);
-    // // leg2.motor2.servo.write(angle);
-    // leg2.motor3.servo.write(angle);
+    // // leg6.motor1.servo.write(angle);
+    // // leg6.motor2.servo.write(angle);
+    // leg6.motor3.servo.write(angle);
 
     // Serial.println(angle);
 
