@@ -55,24 +55,44 @@ void initServo()
     // leg6.motor1.servo.attach(35);
     // leg6.motor2.servo.attach(37);
     // leg6.motor3.servo.attach(39);
+    //     leg1.motor1.servo.attach(34, leg1.motor1.min, leg1.motor1.max);
+    // leg1.motor2.servo.attach(36, leg1.motor2.min, leg1.motor2.max);
+    // leg1.motor3.servo.attach(38, leg1.motor3.min, leg1.motor3.max);
+    // leg2.motor1.servo.attach(23, leg2.motor1.min, leg1.motor1.max);
+    // leg2.motor2.servo.attach(25, leg2.motor2.min, leg1.motor2.max);
+    // leg2.motor3.servo.attach(27, leg2.motor3.min, leg1.motor3.max);
+    // leg3.motor1.servo.attach(28, leg3.motor1.min, leg3.motor1.max);
+    // leg3.motor2.servo.attach(30, leg3.motor2.min, leg3.motor2.max);
+    // leg3.motor3.servo.attach(32, leg3.motor3.min, leg3.motor3.max);
+    // leg4.motor1.servo.attach(29, leg4.motor1.min, leg4.motor1.max);
+    // leg4.motor2.servo.attach(31, leg4.motor2.min, leg4.motor2.max);
+    // leg4.motor3.servo.attach(33, leg4.motor3.min, leg4.motor3.max);
+    // leg5.motor1.servo.attach(22, leg5.motor1.min, leg5.motor1.max);
+    // leg5.motor2.servo.attach(24, leg5.motor2.min, leg5.motor2.max);
+    // leg5.motor3.servo.attach(26, leg5.motor3.min, leg5.motor3.max);
+    // leg6.motor1.servo.attach(35, leg6.motor1.min, leg6.motor1.max);
+    // leg6.motor2.servo.attach(37, leg6.motor2.min, leg6.motor2.max);
+    // leg6.motor3.servo.attach(39, leg6.motor3.min, leg6.motor3.max);
     leg1.motor1.servo.attach(34);
     leg1.motor2.servo.attach(36);
     leg1.motor3.servo.attach(38);
-    leg2.motor1.servo.attach(23);
-    leg2.motor2.servo.attach(25);
-    leg2.motor3.servo.attach(27);
+
     leg3.motor1.servo.attach(28);
     leg3.motor2.servo.attach(30);
     leg3.motor3.servo.attach(32);
     leg4.motor1.servo.attach(29);
     leg4.motor2.servo.attach(31);
     leg4.motor3.servo.attach(33);
-    leg5.motor1.servo.attach(22);
-    leg5.motor2.servo.attach(24);
-    leg5.motor3.servo.attach(26);
     leg6.motor1.servo.attach(35);
     leg6.motor2.servo.attach(37);
     leg6.motor3.servo.attach(39);
+    leg5.motor1.servo.attach(22);
+    leg5.motor2.servo.attach(24);
+    leg5.motor3.servo.attach(26);
+
+    leg2.motor1.servo.attach(23);
+    leg2.motor2.servo.attach(25);
+    leg2.motor3.servo.attach(27);
 }
 
 // leg switch case
@@ -167,7 +187,7 @@ void move()
                 {
                     float offset = sin((float)i / steps * PI);
                     local_leg->D.x = width + 4 * offset;
-                    local_leg->D.z = height - 12 * offset;
+                    local_leg->D.z = height - 24 * offset;
                 }
                 if (leg == 3 || leg == 4)
                     legRotation(leg, !backwards);
@@ -218,11 +238,17 @@ void stance(char stance)
 void angleFix(leg *Leg, bool minus)
 {
     Leg->motor1.angle = 90 - Leg->motor1.angle;
-    if (Leg == &leg2 || Leg == &leg4 || Leg == &leg6) // for legs 2 4 6 motors 2 and 3 are already positive so no need to change
-        return;
     Leg->motor2.angle += 90 * pow(-1, minus);
-    Leg->motor3.angle += 180 * pow(-1, minus);
-    Leg->motor3.angle = 180 + Leg->motor3.angle * pow(-1, !minus);
+    if (Leg == &leg2 || Leg == &leg4 || Leg == &leg6) // for legs 2 4 6 motors 2 and 3 are already positive so no need to change
+    {
+        Leg->motor3.angle = abs(Leg->motor3.angle);
+        Leg->motor3.angle = 180 - Leg->motor3.angle;
+    }
+    else
+    {
+        Leg->motor3.angle += 180 * pow(-1, minus);
+        Leg->motor3.angle = 180 + Leg->motor3.angle * pow(-1, !minus);
+    }
 }
 
 void legWrite(leg *Leg, int legNum)
@@ -394,11 +420,27 @@ void setup()
     // TODO: maybe rgb for different states
     // digitalWrite(led, 1);
 }
-
+int angle = 90;
 void loop()
 {
+
     sendMessage();
     readMessage();
+
+    // if (stop)
+    //     angle = 0;
+    // else
+    //     angle = 90;
+
+    // // leg2.motor1.servo.write(angle);
+    // // leg2.motor2.servo.write(angle);
+    // leg2.motor3.servo.write(angle);
+
+    // Serial.println(angle);
+
+    // delay(500);
+
+    // return;
 
     if (stop)
         return;
