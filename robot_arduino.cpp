@@ -166,7 +166,9 @@ void legRotation(int j, bool backwards)
     leg_angle(j);
 }
 
-// robot moving based on bool backwards
+// TODO: change to move from cur motor 1 angle to some second motor1 angle ?
+// TODO: test if sin function is poggers
+//  robot moving based on bool backwards
 void move()
 {
     leg *local_leg;
@@ -177,14 +179,15 @@ void move()
             for (int leg = 1; leg <= 6; leg++)
             {
                 local_leg = &legSwitch(leg);
-                if (leg == 1 || leg == 4 || leg == 5)
+                // TODO: TEST IF WORK !!!!!
+                if ((leg == 1 || leg == 4 || leg == 5) == !backwards)
                 {
                     local_leg->D.x = width;
                     local_leg->D.z = height;
                 }
-                else if (leg == 2 || leg == 3 || leg == 6)
+                else
                 {
-                    float offset = sin((float)i / steps * PI);
+                    float offset = pow(sin((float)i / steps * PI), 1 / 3);
                     local_leg->D.x = width + 4 * offset;
                     local_leg->D.z = height - 24 * offset;
                 }
@@ -236,6 +239,7 @@ void stance(char stance)
 // Leg angle fix CATIA to irl model
 void angleFix(leg *Leg, bool minus)
 {
+    // TODO: ???
     Leg->motor1.angle = 90 - Leg->motor1.angle;
     Leg->motor2.angle += 90 * pow(-1, minus);
     if (Leg == &leg2 || Leg == &leg4 || Leg == &leg6) // for legs 2 4 6 motors 2 and 3 are already positive so no need to change
@@ -390,11 +394,14 @@ void sendMessage()
 }
 
 void legValues();
+
 Servo tes;
+int angle = 90;
 // TODO: bluetooth variable change
 // TODO: figure out range
 void setup()
 {
+    syncData = false;
     Serial.begin(115200);
     Serial1.begin(9600);
 
@@ -408,7 +415,7 @@ void setup()
 
     Serial.println("Startup");
     tes.attach(47);
-    mode = 1;
+    mode = 3;
     steps = 10; // TODO: figure out best num
     // max range = -1 = abs(motor1.max) + abs(motor1.min)
     range = -1;  // useless?
@@ -419,7 +426,7 @@ void setup()
     // TODO: maybe rgb for different states
     // digitalWrite(led, 1);
 }
-int angle = 90;
+
 void loop()
 {
 
@@ -444,10 +451,39 @@ void loop()
     if (stop)
         return;
 
-    // TODO: EEPROM write read, + test
-
+    // TODO: try case 3 into case 1 or just set stance and then go into 1
     switch (mode)
     {
+    case 1:
+        // walk
+        move();
+        break;
+    case 2:
+        // walk to stand
+        break;
+    case 3:
+        // stand
+        stance('n');
+        int sequence[6] = {5, 4, 3, 2, 1, 6};
+        for (int i = 0; i < 6; i++)
+        {
+            // TODO: do motors one by one if they go too hard poggers
+            leg *local_leg = &legSwitch(sequence[i]);
+            local_leg->D.x = width;
+            local_leg->D.z = height;
+            leg_angle(sequence[i]);
+            legWrite(local_leg, sequence[i]);
+            servoWait(sequence[i]);
+            delay(500); // looks better?
+        }
+        mode = 1;
+        break;
+    case 4:
+        // stand to walk
+
+        break;
+
+    // TODO: EEPROM write read, + test
     case -1:
         // shut down
         Serial.print("leg1");
@@ -477,33 +513,6 @@ void loop()
         EEPROM.get(sizeof(leg) * 3, leg4);
         EEPROM.get(sizeof(leg) * 4, leg5);
         EEPROM.get(sizeof(leg) * 5, leg6); */
-        break;
-    case 1:
-        // walk
-        stance('n');
-        move();
-        // mode++;
-        break;
-    case 2:
-        // walk to stand
-        break;
-    case 3:
-        // stand
-        stance('n');
-        int sequence[6] = {5, 4, 3, 2, 1, 6};
-        for (int i = 0; i < 6; i++)
-        {
-            leg *local_leg = &legSwitch(sequence[i]);
-            local_leg->D.x = width;
-            local_leg->D.z = height;
-            leg_angle(sequence[i]);
-            legWrite(local_leg, sequence[i]);
-            servoWait(sequence[i]);
-        }
-        break;
-    case 4:
-        // stand to walk
-        delay(500);
         break;
     }
 }
@@ -557,4 +566,20 @@ void legValues()
     leg1.s1.z = leg2.s1.z = leg3.s1.z = leg4.s1.z = leg5.s1.z = leg6.s1.z = -16.3;
     leg1.s1.x = leg3.s1.x = leg5.s1.x = -23.5;
     leg2.s1.x = leg4.s1.x = leg6.s1.x = 23.5;
+
+    // TODO: TEST IF WORK
+    for (int i = 1; i <= 6; i++)
+        for (int j = 1; j <= 3; j++)
+        {
+            if (j != 3)
+            {
+                legSwitch(i).motorSwitch(j).min += 90;
+                legSwitch(i).motorSwitch(j).max += 90;
+            }
+            else
+            {
+                legSwitch(i).motorSwitch(j).min += 180;
+                legSwitch(i).motorSwitch(j).max += 180;
+            }
+        }
 }
