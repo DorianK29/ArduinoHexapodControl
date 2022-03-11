@@ -35,6 +35,7 @@ int button = 1, led = 1;
 int bluetooth = 44;
 
 // ARDUINO: TODO: real pins
+// TODO: Try with min max values
 void initServo()
 {
     // leg1.motor1.servo.attach(22);
