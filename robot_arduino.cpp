@@ -29,34 +29,13 @@ bool syncData = false;
 // stop everything
 bool stop = true;
 
-// TODO: ARDUINO:
-int button = 1, led = 1;
-
 int bluetooth = 44;
 
 // ARDUINO: TODO: real pins
-// TODO: Try with min max values
+// TEST: Try with min max values
 void initServo()
 {
-    // leg1.motor1.servo.attach(22);
-    // leg1.motor2.servo.attach(24);
-    // leg1.motor3.servo.attach(26);
-    // leg2.motor1.servo.attach(23);
-    // leg2.motor2.servo.attach(25);
-    // leg2.motor3.servo.attach(27);
-    // leg3.motor1.servo.attach(28);
-    // leg3.motor2.servo.attach(30);
-    // leg3.motor3.servo.attach(32);
-    // leg4.motor1.servo.attach(29);
-    // leg4.motor2.servo.attach(31);
-    // leg4.motor3.servo.attach(33);
-    // leg5.motor1.servo.attach(34);
-    // leg5.motor2.servo.attach(36);
-    // leg5.motor3.servo.attach(38);
-    // leg6.motor1.servo.attach(35);
-    // leg6.motor2.servo.attach(37);
-    // leg6.motor3.servo.attach(39);
-    //     leg1.motor1.servo.attach(34, leg1.motor1.min, leg1.motor1.max);
+    // leg1.motor1.servo.attach(34, leg1.motor1.min, leg1.motor1.max);
     // leg1.motor2.servo.attach(36, leg1.motor2.min, leg1.motor2.max);
     // leg1.motor3.servo.attach(38, leg1.motor3.min, leg1.motor3.max);
     // leg2.motor1.servo.attach(23, leg2.motor1.min, leg1.motor1.max);
@@ -83,16 +62,15 @@ void initServo()
     leg3.motor1.servo.attach(28);
     leg3.motor2.servo.attach(30);
     leg3.motor3.servo.attach(32);
+    leg4.motor1.servo.attach(29);
+    leg4.motor2.servo.attach(31);
+    leg4.motor3.servo.attach(33);
     leg5.motor1.servo.attach(22);
     leg5.motor2.servo.attach(24);
     leg5.motor3.servo.attach(26);
     leg6.motor1.servo.attach(35);
     leg6.motor2.servo.attach(37);
     leg6.motor3.servo.attach(39);
-
-    leg4.motor1.servo.attach(29);
-    leg4.motor2.servo.attach(31);
-    leg4.motor3.servo.attach(33);
 }
 
 // leg switch case
@@ -167,12 +145,14 @@ void legRotation(int j, bool backwards)
     leg_angle(j);
 }
 
+// TODO: move step by step
 // TODO: change to move from cur motor 1 angle to some second motor1 angle ?
-// TODO: test if sin function is poggers
 //  robot moving based on bool backwards
 void move()
 {
     leg *local_leg;
+    // TODO: check if for j is even needed
+    //       because range in legRotation is motor max + motor min, so if it runs twice = 2 full gaits
     for (int j = 1; j <= 2;)
         for (int i = 1; i <= steps && j <= 2; i++)
         {
@@ -180,7 +160,7 @@ void move()
             for (int leg = 1; leg <= 6; leg++)
             {
                 local_leg = &legSwitch(leg);
-                // TODO: TEST IF WORK !!!!!
+                // TEST: test if sin function is poggers
                 if ((leg == 1 || leg == 4 || leg == 5) == !backwards)
                 {
                     local_leg->D.x = width;
@@ -192,12 +172,14 @@ void move()
                     local_leg->D.x = width + 4 * offset;
                     local_leg->D.z = height - 24 * offset;
                 }
+                // TODO: why this?
                 if (leg == 3 || leg == 4)
                     legRotation(leg, !backwards);
                 else
                     legRotation(leg, backwards);
-                local_leg->motorRadToDeg();
 
+                local_leg->motorRadToDeg();
+                // TODO: min and max values changed big sad maybe no wrok?
                 if (local_leg->motor1.angle >= local_leg->motor1.max || local_leg->motor1.angle <= local_leg->motor1.min)
                     max = true;
                 local_leg->motorDegToRad();
@@ -292,6 +274,7 @@ void servoWait(int legNum = 0)
         if (legNum != 0) // for a given legNum
         {
             waiting = false;
+            // TODO: change for to while, test
             for (1; motorNum <= 3 && waiting == false;)
             {
                 int difference = legSwitch(legNum).motorSwitch(motorNum).angle - legSwitch(legNum).motorSwitch(motorNum).servo.read();
@@ -376,6 +359,7 @@ void readMessage()
 
 void sendMessage()
 {
+    // TEST: wasnt working last time
     if (!syncData && digitalRead(bluetooth) == HIGH) // if we havent synced and have connected to bluetooth
     {
         String buffer;
@@ -406,13 +390,8 @@ void setup()
     Serial.begin(115200);
     Serial1.begin(9600);
 
-    // pinMode(button, INPUT_PULLUP);
-    // pinMode(led, OUTPUT);
-
     legValues();
     initServo();
-    //  cout << "mode: ";
-    //  cin >> mode;
 
     Serial.println("Startup");
     tes.attach(47);
@@ -422,10 +401,6 @@ void setup()
     range = -1;  // useless?
     width = 120; // APP:
     height = 80; // APP:
-
-    // ARDUINO: turn led on while robot is turned on
-    // TODO: maybe rgb for different states
-    // digitalWrite(led, 1);
 }
 
 void loop()
@@ -452,7 +427,7 @@ void loop()
     if (stop)
         return;
 
-    // TODO: try case 3 into case 1 or just set stance and then go into 1
+    // TEST: try case 3 into case 1 or just set stance and then go into 1
     switch (mode)
     {
     case 1:
@@ -568,7 +543,9 @@ void legValues()
     leg1.s1.x = leg3.s1.x = leg5.s1.x = -23.5;
     leg2.s1.x = leg4.s1.x = leg6.s1.x = 23.5;
 
-    // TODO: TEST IF WORK
+    // TEST:
+    // TODO: will break program go to move if max :=)
+    /*
     for (int i = 1; i <= 6; i++)
         for (int j = 1; j <= 3; j++)
         {
@@ -582,5 +559,22 @@ void legValues()
                 legSwitch(i).motorSwitch(j).min += 180;
                 legSwitch(i).motorSwitch(j).max += 180;
             }
-        }
+
+            // print values to change code above :=
+            Serial.print("leg");
+            Serial.print(i);
+            Serial.print(".motor");
+            Serial.print(j);
+            Serial.print(".min = ");
+            Serial.print(legSwitch(i).motorSwitch(j).min);
+            Serial.print(";\n");
+
+            Serial.print("leg");
+            Serial.print(i);
+            Serial.print(".motor");
+            Serial.print(j);
+            Serial.print(".max = ");
+            Serial.print(legSwitch(i).motorSwitch(j).max);
+            Serial.print(";\n");
+        } */
 }
