@@ -213,8 +213,8 @@ void stance(char stance)
         leg2.motor1.angle = -20;
         leg3.motor1.angle = 10;
         leg4.motor1.angle = -10;
-        leg5.motor1.angle = -8;
-        leg6.motor1.angle = 7;
+        leg5.motor1.angle = -15;
+        leg6.motor1.angle = 15;
         break;
     }
 }
@@ -227,7 +227,7 @@ void angleFix(leg *Leg, bool minus)
     Leg->motor2.angle += 90 * pow(-1, minus);
     if (Leg == &leg2 || Leg == &leg4 || Leg == &leg6) // for legs 2 4 6 motors 2 and 3 are already positive so no need to change
     {
-        Leg->motor3.angle = abs(Leg->motor3.angle);
+        // Leg->motor3.angle = abs(Leg->motor3.angle);
         Leg->motor3.angle = 180 - Leg->motor3.angle;
     }
     else
@@ -235,6 +235,8 @@ void angleFix(leg *Leg, bool minus)
         Leg->motor3.angle += 180 * pow(-1, minus);
         Leg->motor3.angle = 180 + Leg->motor3.angle * pow(-1, !minus);
     }
+    if (Leg == &leg5)
+        Leg->motor1.angle += 9;
 }
 
 void legWrite(leg *Leg, int legNum)
@@ -386,7 +388,6 @@ int angle = 90;
 // TODO: figure out range
 void setup()
 {
-    syncData = false;
     Serial.begin(115200);
     Serial1.begin(9600);
 
@@ -395,7 +396,7 @@ void setup()
 
     Serial.println("Startup");
     tes.attach(47);
-    mode = 3;
+    mode = 2;
     steps = 10; // TODO: figure out best num
     // max range = -1 = abs(motor1.max) + abs(motor1.min)
     range = -1;  // useless?
@@ -406,8 +407,8 @@ void setup()
 void loop()
 {
 
-    sendMessage();
-    readMessage();
+    // sendMessage();
+    // readMessage();
 
     // if (stop)
     //     angle = 0;
@@ -420,12 +421,12 @@ void loop()
 
     // Serial.println(angle);
 
-    // delay(500);
+    // delay(5000);
 
     // return;
 
-    if (stop)
-        return;
+    // if (stop)
+    //     return;
 
     // TEST: try case 3 into case 1 or just set stance and then go into 1
     switch (mode)
@@ -436,6 +437,23 @@ void loop()
         break;
     case 2:
         // walk to stand
+        stance('n');
+        for (int i = 1; i <= 6; i++)
+        {
+            leg *local_leg = &legSwitch(i);
+
+            local_leg->motor3.angle = -180;
+            local_leg->motor2.angle = -90;
+            if (i % 2 == 0)
+            {
+                local_leg->motor3.angle = 180;
+                local_leg->motor2.angle = 90;
+            }
+
+            local_leg->motorDegToRad();
+            legWrite(local_leg, i);
+        }
+        mode = 15;
         break;
     case 3:
         // stand
@@ -450,9 +468,9 @@ void loop()
             leg_angle(sequence[i]);
             legWrite(local_leg, sequence[i]);
             servoWait(sequence[i]);
-            delay(500); // looks better?
+            delay(200); // looks better?
         }
-        mode = 1;
+        mode = 4;
         break;
     case 4:
         // stand to walk

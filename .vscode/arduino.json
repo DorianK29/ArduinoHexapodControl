@@ -7,5 +7,6 @@
             "build.extra_flags",
             "-D__AVR_ATmega2560__"
         ]
-    ]
+    ],
+    "port": "COM5"
 }
