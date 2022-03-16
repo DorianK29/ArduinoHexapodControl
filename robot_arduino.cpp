@@ -168,9 +168,9 @@ void move()
                 }
                 else
                 {
-                    float offset = pow(sin((float)i / steps * PI), 1 / 3);
+                    float offset = pow(sin((float)i / steps * PI), 2 / 3);
                     local_leg->D.x = width + 4 * offset;
-                    local_leg->D.z = height - 24 * offset;
+                    local_leg->D.z = height - 12 * offset;
                 }
                 // TODO: why this?
                 if (leg == 3 || leg == 4)
@@ -396,7 +396,7 @@ void setup()
 
     Serial.println("Startup");
     tes.attach(47);
-    mode = 2;
+    mode = 3;
     steps = 10; // TODO: figure out best num
     // max range = -1 = abs(motor1.max) + abs(motor1.min)
     range = -1;  // useless?
@@ -470,7 +470,7 @@ void loop()
             servoWait(sequence[i]);
             delay(200); // looks better?
         }
-        mode = 4;
+        mode = 1;
         break;
     case 4:
         // stand to walk
