@@ -21,7 +21,9 @@ float width, arduinoWidth;
 float height, arduinoHeight;
 
 // move forwards if false, backwards if true
-bool backwards = false;
+bool moveBackwards = false;
+
+bool allowMove = false;
 
 // if we have already sent data for first sync
 bool syncData = false;
@@ -119,35 +121,38 @@ void leg_angle(int legNum)
 
     leg->s2.x = leg->s1.x + pow(-1, legNum) * joint1 * cos(leg->motor1.angle);
     leg->s2.y = leg->s1.y + pow(-1, leg_pos) * joint1 * sin(leg->motor1.angle);
-    leg->s2.z = leg->s1.z;
+    leg->s2.z = leg->s1.z; // all negative
 
     leg->L.x = abs(leg->D.x) - abs(leg->s2.x);
-    leg->L.y = leg->D.y + leg->s2.y;
-    leg->L.z = leg->D.z + leg->s2.z;
+    leg->L.y = leg->D.y + leg->s2.y; // depends on leg pos
+    leg->L.z = leg->D.z + leg->s2.z; // D - s2 (s2 all legs negative)
 
     float P = atan(leg->L.z / (sqrt(leg->L.x * leg->L.x + leg->L.y * leg->L.y)));
     float R = asin((leg->L.z - leg->l.z) / leg->l.length());
 
-    leg->motor2.angle = pow(-1, legNum) * (acos((pow(joint2, 2) + pow(leg->L.length(), 2) - pow(joint3, 2)) / (2 * joint2 * leg->L.length())) - (P + R));
-    leg->motor3.angle = pow(-1, legNum) * (PI - acos((pow(joint2, 2) + pow(joint3, 2) - pow(leg->L.length(), 2)) / (2 * joint2 * joint3)));
+    leg->motor2.angle = PI / 2 + pow(-1, legNum) * (acos((pow(joint2, 2) + pow(leg->L.length(), 2) - pow(joint3, 2)) / (2 * joint2 * leg->L.length())) - (P + R));
+    if (legNum % 2 == 0) // for even legs
+        leg->motor3.angle = pow(-1, legNum) * (acos((pow(joint2, 2) + pow(joint3, 2) - pow(leg->L.length(), 2)) / (2 * joint2 * joint3)));
+    else // for odd legs
+        leg->motor3.angle = pow(-1, legNum) * (PI - acos((pow(joint2, 2) + pow(joint3, 2) - pow(leg->L.length(), 2)) / (2 * joint2 * joint3)));
 }
 
-// rotating the leg based on bool backwards
-void legRotation(int j, bool backwards)
+// rotating the leg based on bool moveBackwards
+void legRotation(int legNum, bool moveBackwards)
 {
-    leg *local_leg = &legSwitch(j);
+    leg *local_leg = &legSwitch(legNum);
     int local_range;
     if (range == -1)
-        local_range = abs(local_leg->motor1.max) + abs(local_leg->motor1.min);
+        local_range = abs(local_leg->motor1.max + (-1) * local_leg->motor1.min);
     else
         local_range = range;
-    local_leg->motor1.angle += (local_range / steps) * pow(-1, backwards);
-    leg_angle(j);
+    local_leg->motor1.angle += ((float)local_range / steps) * pow(-1, moveBackwards);
+    leg_angle(legNum);
 }
 
 // TODO: move step by step
 // TODO: change to move from cur motor 1 angle to some second motor1 angle ?
-//  robot moving based on bool backwards
+//  robot moving based on bool moveBackwards
 void move()
 {
     leg *local_leg;
@@ -160,8 +165,7 @@ void move()
             for (int leg = 1; leg <= 6; leg++)
             {
                 local_leg = &legSwitch(leg);
-                // TEST: test if sin function is poggers
-                if ((leg == 1 || leg == 4 || leg == 5) == !backwards)
+                if ((leg == 1 || leg == 4 || leg == 5) == !moveBackwards)
                 {
                     local_leg->D.x = width;
                     local_leg->D.z = height;
@@ -174,13 +178,13 @@ void move()
                 }
                 // TODO: why this?
                 if (leg == 3 || leg == 4)
-                    legRotation(leg, !backwards);
+                    legRotation(leg, !moveBackwards);
                 else
-                    legRotation(leg, backwards);
+                    legRotation(leg, moveBackwards);
 
                 local_leg->motorRadToDeg();
                 // TODO: min and max values changed big sad maybe no wrok?
-                if (local_leg->motor1.angle >= local_leg->motor1.max || local_leg->motor1.angle <= local_leg->motor1.min)
+                if (local_leg->motor1.angle > local_leg->motor1.max || local_leg->motor1.angle < local_leg->motor1.min)
                     max = true;
                 local_leg->motorDegToRad();
             }
@@ -188,7 +192,7 @@ void move()
             {
                 max = false;
                 j++;
-                backwards = !backwards;
+                moveBackwards = !moveBackwards;
             }
             servoWrite();
         }
@@ -201,71 +205,39 @@ void stance(char stance)
     switch (stance)
     {
     case 'z': // angles at zero
-        leg1.motor1.angle = 0;
-        leg2.motor1.angle = -40;
-        leg3.motor1.angle = 20;
-        leg4.motor1.angle = 0;
-        leg5.motor1.angle = -30;
-        leg6.motor1.angle = -15;
+        leg1.motor1.angle = leg1.motor1.min;
+        leg2.motor1.angle = leg2.motor1.min;
+        leg3.motor1.angle = leg3.motor1.min;
+        leg4.motor1.angle = leg4.motor1.min;
+        leg5.motor1.angle = leg5.motor1.min;
+        leg6.motor1.angle = leg6.motor1.min;
         break;
     case 'n': // normal stance
-        leg1.motor1.angle = 20;
-        leg2.motor1.angle = -20;
-        leg3.motor1.angle = 10;
-        leg4.motor1.angle = -10;
-        leg5.motor1.angle = -15;
-        leg6.motor1.angle = 15;
+        leg1.motor1.angle = leg1.motor1.min + (leg1.motor1.max + (-1) * leg1.motor1.min) / 2;
+        leg2.motor1.angle = leg2.motor1.min + (leg2.motor1.max + (-1) * leg2.motor1.min) / 2;
+        leg3.motor1.angle = leg3.motor1.min + (leg3.motor1.max + (-1) * leg3.motor1.min) / 2;
+        leg4.motor1.angle = leg4.motor1.min + (leg4.motor1.max + (-1) * leg4.motor1.min) / 2;
+        leg5.motor1.angle = leg5.motor1.min + (leg5.motor1.max + (-1) * leg5.motor1.min) / 2;
+        leg6.motor1.angle = leg6.motor1.min + (leg6.motor1.max + (-1) * leg6.motor1.min) / 2;
         break;
     }
 }
 
 // Leg angle fix CATIA to irl model
-void angleFix(leg *Leg, bool minus)
+void angleFix(int legNum)
 {
-    // TODO: ???
+    leg *Leg = &legSwitch(legNum);
+
+    Leg->motor3.angle = abs(Leg->motor3.angle);
     Leg->motor1.angle = 90 - Leg->motor1.angle;
-    Leg->motor2.angle += 90 * pow(-1, minus);
-    if (Leg == &leg2 || Leg == &leg4 || Leg == &leg6) // for legs 2 4 6 motors 2 and 3 are already positive so no need to change
-    {
-        // Leg->motor3.angle = abs(Leg->motor3.angle);
-        Leg->motor3.angle = 180 - Leg->motor3.angle;
-    }
-    else
-    {
-        Leg->motor3.angle += 180 * pow(-1, minus);
-        Leg->motor3.angle = 180 + Leg->motor3.angle * pow(-1, !minus);
-    }
-    if (Leg == &leg5)
-        Leg->motor1.angle += 9;
-}
-
-void legWrite(leg *Leg, int legNum)
-{
-    Leg->motorRadToDeg();
-
-    angleFix(Leg, false);
-
-    Leg->motor1.servo.write(Leg->motor1.angle);
-    Leg->motor2.servo.write(Leg->motor2.angle);
-    Leg->motor3.servo.write(Leg->motor3.angle);
-
-    // Print to Serial
-    Serial.print("Leg: ");
-    Serial.print(legNum);
-    Serial.print(" motor1: ");
-    Serial.print(Leg->motor1.angle);
-    Serial.print(" motor2: ");
-    Serial.print(Leg->motor2.angle);
-    Serial.print(" motor3: ");
-    Serial.println(Leg->motor3.angle);
-
-    // servoWait(legNum);
+    if (legNum == 4)
+        Leg->motor2.angle -= 14;
 }
 
 // ARDUINO: TODO: check servo.read output, change accordingly
 void servoWait(int legNum = 0)
 {
-    Serial.println("Servo Wait...");
+    // Serial.println("Servo Wait...");
     bool wait = true;
     bool waiting;
     int motorNum = 1;
@@ -307,13 +279,37 @@ void servoWait(int legNum = 0)
             }
         }
         wait = waiting;
-        delay(250);
+        delay(50);
     } while (wait);
-    if (legNum == 0)
-        for (int legN = 1; legN <= 6; legN++)
-            angleFix(&legSwitch(legN), true);
-    else
-        angleFix(&legSwitch(legNum), true);
+}
+
+void legWrite(leg *Leg, int legNum)
+{
+    Leg->motorRadToDeg();
+
+    angleFix(legNum);
+
+    Leg->motor1.servo.write(Leg->motor1.angle);
+    Leg->motor2.servo.write(Leg->motor2.angle);
+    Leg->motor3.servo.write(Leg->motor3.angle);
+
+    // Print to Serial
+    String buffer;
+    buffer.concat("Leg: ");
+    buffer.concat(legNum);
+    buffer.concat(" motor1: ");
+    buffer.concat(Leg->motor1.angle);
+    buffer.concat(" motor2: ");
+    buffer.concat(Leg->motor2.angle);
+    buffer.concat(" motor3: ");
+    buffer.concat(Leg->motor3.angle);
+    Serial.println(buffer);
+
+    servoWait(legNum);
+
+    angleFix(legNum);
+
+    // angleFix(legNum, true);
 }
 
 // ARDUINO:
@@ -321,8 +317,7 @@ void servoWrite()
 {
     for (int legN = 1; legN <= 6; legN++)
         legWrite(&legSwitch(legN), legN);
-
-    servoWait();
+    Serial.println();
 }
 
 void readMessage()
@@ -338,16 +333,24 @@ void readMessage()
             Serial.print("Reading: ");
             Serial.println(line->getItemAtIndex(0));
             if (line->getItemAtIndex(0) == "Move forwards")
-                backwards = false;
+            {
+                moveBackwards = false;
+                allowMove = true;
+            }
             else if (line->getItemAtIndex(0) == "Move backwards")
-                backwards = true;
+            {
+                moveBackwards = true;
+                allowMove = true;
+            }
             else if (line->getItemAtIndex(0) == "Update height and width")
             {
-                Serial.println(line->getItemAtIndex(1).toFloat());
-                Serial.println(line->getItemAtIndex(2).toFloat());
+                Serial.print(arduinoHeight);
+                Serial.print(" -> ");
                 arduinoHeight = line->getItemAtIndex(1).toFloat();
-                arduinoWidth = line->getItemAtIndex(2).toFloat();
                 Serial.println(arduinoHeight);
+                Serial.print(arduinoWidth);
+                Serial.print(" -> ");
+                arduinoWidth = line->getItemAtIndex(2).toFloat();
                 Serial.println(arduinoWidth);
             }
             else if (line->getItemAtIndex(0) == "Stop")
@@ -361,7 +364,6 @@ void readMessage()
 
 void sendMessage()
 {
-    // TEST: wasnt working last time
     if (!syncData && digitalRead(bluetooth) == HIGH) // if we havent synced and have connected to bluetooth
     {
         String buffer;
@@ -373,6 +375,7 @@ void sendMessage()
         buffer.concat("##stop:");
         buffer.concat(stop);
         buffer.concat("~");
+        Serial1.print(buffer);
         syncData = true;
     }
 
@@ -382,20 +385,18 @@ void sendMessage()
 
 void legValues();
 
-Servo tes;
-int angle = 90;
 // TODO: bluetooth variable change
 // TODO: figure out range
 void setup()
 {
     Serial.begin(115200);
     Serial1.begin(9600);
+    Serial1.setTimeout(20);
 
     legValues();
     initServo();
 
     Serial.println("Startup");
-    tes.attach(47);
     mode = 3;
     steps = 10; // TODO: figure out best num
     // max range = -1 = abs(motor1.max) + abs(motor1.min)
@@ -406,59 +407,29 @@ void setup()
 
 void loop()
 {
+    sendMessage();
+    readMessage();
 
-    // sendMessage();
-    // readMessage();
+    if (stop)
+        return;
 
-    // if (stop)
-    //     angle = 0;
-    // else
-    //     angle = 90;
-
-    // // leg6.motor1.servo.write(angle);
-    // // leg6.motor2.servo.write(angle);
-    // leg6.motor3.servo.write(angle);
-
-    // Serial.println(angle);
-
-    // delay(5000);
-
-    // return;
-
-    // if (stop)
-    //     return;
-
-    // TEST: try case 3 into case 1 or just set stance and then go into 1
     switch (mode)
     {
     case 1:
         // walk
-        move();
+        if (allowMove)
+        {
+            move();
+            allowMove = false;
+        }
         break;
     case 2:
         // walk to stand
-        stance('n');
-        for (int i = 1; i <= 6; i++)
-        {
-            leg *local_leg = &legSwitch(i);
-
-            local_leg->motor3.angle = -180;
-            local_leg->motor2.angle = -90;
-            if (i % 2 == 0)
-            {
-                local_leg->motor3.angle = 180;
-                local_leg->motor2.angle = 90;
-            }
-
-            local_leg->motorDegToRad();
-            legWrite(local_leg, i);
-        }
-        mode = 15;
         break;
     case 3:
         // stand
         stance('n');
-        int sequence[6] = {5, 4, 3, 2, 1, 6};
+        int sequence[6] = {3, 1, 6, 4, 2, 5};
         for (int i = 0; i < 6; i++)
         {
             // TODO: do motors one by one if they go too hard poggers
@@ -467,46 +438,14 @@ void loop()
             local_leg->D.z = height;
             leg_angle(sequence[i]);
             legWrite(local_leg, sequence[i]);
-            servoWait(sequence[i]);
             delay(200); // looks better?
         }
+        Serial.println();
         mode = 1;
         break;
     case 4:
         // stand to walk
 
-        break;
-
-    // TODO: EEPROM write read, + test
-    case -1:
-        // shut down
-        Serial.print("leg1");
-        Serial.print("leg2");
-        Serial.print("leg3");
-        Serial.print("leg4");
-        Serial.print("leg5");
-        Serial.println("leg6");
-        /*
-        EEPROM.put(0, leg1);
-        EEPROM.put(sizeof(leg), leg2);
-        EEPROM.put(sizeof(leg) * 2, leg3);
-        EEPROM.put(sizeof(leg) * 3, leg4);
-        EEPROM.put(sizeof(leg) * 4, leg5);
-        EEPROM.put(sizeof(leg) * 5, leg6); */
-    case 0:
-        // wake up
-        Serial.print("leg1");
-        Serial.print("leg2");
-        Serial.print("leg3");
-        Serial.print("leg4");
-        Serial.print("leg5");
-        Serial.println("leg6");
-        /*EEPROM.get(0, leg1);
-        EEPROM.get(sizeof(leg), leg2);
-        EEPROM.get(sizeof(leg) * 2, leg3);
-        EEPROM.get(sizeof(leg) * 3, leg4);
-        EEPROM.get(sizeof(leg) * 4, leg5);
-        EEPROM.get(sizeof(leg) * 5, leg6); */
         break;
     }
 }
@@ -514,48 +453,46 @@ void loop()
 // set motor limits, joint values
 void legValues()
 {
-    leg1.motor1.min = 0;
+    leg1.motor1.min = 10;
     leg1.motor1.max = 40;
     leg1.motor2.min = -60;
     leg1.motor2.max = 45;
     leg1.motor3.min = -160;
     leg1.motor3.max = 0;
-    leg1.s1.y = -57;
     leg2.motor1.min = -40;
-    leg2.motor1.max = 0;
+    leg2.motor1.max = -10;
     leg2.motor2.min = -45;
     leg2.motor2.max = 60;
     leg2.motor3.min = 0;
     leg2.motor3.max = 160;
-    leg2.s1.y = -57;
     leg3.motor1.min = 0;
     leg3.motor1.max = 20;
     leg3.motor2.min = -60;
     leg3.motor2.max = 45;
     leg3.motor3.min = -160;
     leg3.motor3.max = 0;
-    leg3.s1.y = 0;
     leg4.motor1.min = -20;
     leg4.motor1.max = 0;
     leg4.motor2.min = -45;
     leg4.motor2.max = 60;
     leg4.motor3.min = 0;
     leg4.motor3.max = 160;
-    leg4.s1.y = 0;
     leg5.motor1.min = -30;
     leg5.motor1.max = 15;
     leg5.motor2.min = -60;
     leg5.motor2.max = 45;
     leg5.motor3.min = -160;
     leg5.motor3.max = 0;
-    leg5.s1.y = 57;
     leg6.motor1.min = -15;
     leg6.motor1.max = 30;
     leg6.motor2.min = -45;
     leg6.motor2.max = 60;
     leg6.motor3.min = 0;
     leg6.motor3.max = 160;
-    leg6.s1.y = 57;
+
+    leg1.s1.y = leg2.s1.y = -57;
+    leg3.s1.y = leg4.s1.y = 0;
+    leg5.s1.y = leg6.s1.y = 57;
 
     leg1.s1.z = leg2.s1.z = leg3.s1.z = leg4.s1.z = leg5.s1.z = leg6.s1.z = -16.3;
     leg1.s1.x = leg3.s1.x = leg5.s1.x = -23.5;
