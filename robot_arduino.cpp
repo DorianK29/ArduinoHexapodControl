@@ -5,7 +5,7 @@ using namespace std;
 leg leg1, leg2, leg3, leg4, leg5, leg6;
 
 // number of points in range to calculate
-int steps, range;
+int steps;
 
 /**
  * 1 = walk
@@ -20,10 +20,15 @@ float width, arduinoWidth;
 // visina hoda robota
 float height, arduinoHeight;
 
-// move forwards if false, backwards if true
 bool moveBackwards = false;
 
-bool allowMove = false;
+/**
+ * false = 1,4,5
+ * true = 2,3,6
+ */
+bool flyingLegs = false;
+
+bool continuous;
 
 // if we have already sent data for first sync
 bool syncData = false;
@@ -33,7 +38,7 @@ bool stop = true;
 
 int bluetooth = 44;
 
-// ARDUINO: TODO: real pins
+// ARDUINO:
 // TEST: Try with min max values
 void initServo()
 {
@@ -101,7 +106,6 @@ leg &legSwitch(int i)
     }
 }
 
-// TODO: check for collision
 // izracunaj motor2.angle i motor3.angle, ako imamo poziciju noge na x,z + motor1.angle
 void leg_angle(int legNum)
 {
@@ -138,64 +142,50 @@ void leg_angle(int legNum)
 }
 
 // rotating the leg based on bool moveBackwards
-void legRotation(int legNum, bool moveBackwards)
+void legRotation(int legNum, bool backwards)
 {
     leg *local_leg = &legSwitch(legNum);
-    int local_range;
-    if (range == -1)
-        local_range = abs(local_leg->motor1.max + (-1) * local_leg->motor1.min);
-    else
-        local_range = range;
-    local_leg->motor1.angle += ((float)local_range / steps) * pow(-1, moveBackwards);
+    int local_range = abs(local_leg->motor1.max + (-1) * local_leg->motor1.min);
+    local_leg->motor1.angle += ((float)local_range / steps) * pow(-1, backwards);
     leg_angle(legNum);
 }
 
-// TODO: move step by step
-// TODO: change to move from cur motor 1 angle to some second motor1 angle ?
-//  robot moving based on bool moveBackwards
 void move()
 {
     leg *local_leg;
-    // TODO: check if for j is even needed
-    //       because range in legRotation is motor max + motor min, so if it runs twice = 2 full gaits
-    for (int j = 1; j <= 2;)
-        for (int i = 1; i <= steps && j <= 2; i++)
+    bool max = false;
+    for (int i = 1; !max; i++)
+    {
+        for (int leg = 1; leg <= 6; leg++)
         {
-            bool max;
-            for (int leg = 1; leg <= 6; leg++)
+            local_leg = &legSwitch(leg);
+            if ((leg == 1 || leg == 4 || leg == 5) == !flyingLegs)
             {
-                local_leg = &legSwitch(leg);
-                if ((leg == 1 || leg == 4 || leg == 5) == !moveBackwards)
-                {
-                    local_leg->D.x = width;
-                    local_leg->D.z = height;
-                }
-                else
-                {
-                    float offset = pow(sin((float)i / steps * PI), 2 / 3);
-                    local_leg->D.x = width + 4 * offset;
-                    local_leg->D.z = height - 12 * offset;
-                }
-                // TODO: why this?
-                if (leg == 3 || leg == 4)
-                    legRotation(leg, !moveBackwards);
-                else
-                    legRotation(leg, moveBackwards);
+                local_leg->D.x = width;
+                local_leg->D.z = height;
+            }
+            else
+            {
+                float offset = pow(sin((float)i / steps * PI), 2 / 3);
+                local_leg->D.x = width + 4 * offset;
+                local_leg->D.z = height - 12 * offset;
+            }
+            // why this?
+            if (leg == 3 || leg == 4)
+                legRotation(leg, !moveBackwards);
+            else
+                legRotation(leg, moveBackwards);
 
-                local_leg->motorRadToDeg();
-                // TODO: min and max values changed big sad maybe no wrok?
-                if (local_leg->motor1.angle > local_leg->motor1.max || local_leg->motor1.angle < local_leg->motor1.min)
-                    max = true;
-                local_leg->motorDegToRad();
-            }
-            if (max)
-            {
-                max = false;
-                j++;
-                moveBackwards = !moveBackwards;
-            }
-            servoWrite();
+            local_leg->motorRadToDeg();
+            // TODO: min and max values changed big sad maybe no wrok?
+            if (local_leg->motor1.angle > local_leg->motor1.max || local_leg->motor1.angle < local_leg->motor1.min)
+                max = true;
+            local_leg->motorDegToRad();
         }
+        servoWrite();
+    }
+    flyingLegs = !flyingLegs;
+    moveBackwards = !moveBackwards;
 }
 
 // ARDUINO:
@@ -234,22 +224,19 @@ void angleFix(int legNum)
         Leg->motor2.angle -= 14;
 }
 
-// ARDUINO: TODO: check servo.read output, change accordingly
+// ARDUINO:
 void servoWait(int legNum = 0)
 {
-    // Serial.println("Servo Wait...");
     bool wait = true;
     bool waiting;
     int motorNum = 1;
     int tempLegNum = 1;
     do
     {
-        // readMessage();
         if (legNum != 0) // for a given legNum
         {
             waiting = false;
-            // TODO: change for to while, test
-            for (1; motorNum <= 3 && waiting == false;)
+            while (motorNum <= 3 && waiting == false)
             {
                 int difference = legSwitch(legNum).motorSwitch(motorNum).angle - legSwitch(legNum).motorSwitch(motorNum).servo.read();
                 if (difference >= 1)
@@ -261,9 +248,9 @@ void servoWait(int legNum = 0)
         else // for no given leg, ie. all legs
         {
             waiting = false;
-            for (1; tempLegNum <= 6 && waiting == false;)
+            while (tempLegNum <= 6 && waiting == false)
             {
-                for (1; motorNum <= 3 && waiting == false;)
+                while (motorNum <= 3 && waiting == false)
                 {
                     int difference = legSwitch(tempLegNum).motorSwitch(motorNum).angle - legSwitch(tempLegNum).motorSwitch(motorNum).servo.read();
                     if (difference >= 1)
@@ -280,6 +267,8 @@ void servoWait(int legNum = 0)
         }
         wait = waiting;
         delay(50);
+        if (wait)
+            Serial.println("Servo Wait...");
     } while (wait);
 }
 
@@ -334,13 +323,27 @@ void readMessage()
             Serial.println(line->getItemAtIndex(0));
             if (line->getItemAtIndex(0) == "Move forwards")
             {
-                moveBackwards = false;
-                allowMove = true;
+                flyingLegs = false;
+                mode = 1;
+                continuous = false;
             }
             else if (line->getItemAtIndex(0) == "Move backwards")
             {
-                moveBackwards = true;
-                allowMove = true;
+                flyingLegs = true;
+                mode = 1;
+                continuous = false;
+            }
+            else if (line->getItemAtIndex(0) == "Continuous forwards")
+            {
+                flyingLegs = false;
+                mode = 1;
+                continuous = true;
+            }
+            else if (line->getItemAtIndex(0) == "Continuous backwards")
+            {
+                flyingLegs = true;
+                mode = 1;
+                continuous = true;
             }
             else if (line->getItemAtIndex(0) == "Update height and width")
             {
@@ -354,10 +357,13 @@ void readMessage()
                 Serial.println(arduinoWidth);
             }
             else if (line->getItemAtIndex(0) == "Stop")
+            {
                 if (line->getItemAtIndex(1) == "true")
                     stop = false;
                 else if (line->getItemAtIndex(1) == "false")
                     stop = true;
+                continuous = false;
+            }
         }
     }
 }
@@ -386,7 +392,6 @@ void sendMessage()
 void legValues();
 
 // TODO: bluetooth variable change
-// TODO: figure out range
 void setup()
 {
     Serial.begin(115200);
@@ -398,9 +403,7 @@ void setup()
 
     Serial.println("Startup");
     mode = 3;
-    steps = 10; // TODO: figure out best num
-    // max range = -1 = abs(motor1.max) + abs(motor1.min)
-    range = -1;  // useless?
+    steps = 10;
     width = 120; // APP:
     height = 80; // APP:
 }
@@ -417,11 +420,14 @@ void loop()
     {
     case 1:
         // walk
-        if (allowMove)
+        if (!continuous)
         {
-            move();
-            allowMove = false;
+            for (int i = 0; i < 5; i++)
+                move();
+            mode = 0;
         }
+        else
+            move();
         break;
     case 2:
         // walk to stand
@@ -441,7 +447,7 @@ void loop()
             delay(200); // looks better?
         }
         Serial.println();
-        mode = 1;
+        mode = 0;
         break;
     case 4:
         // stand to walk
