@@ -325,25 +325,27 @@ void readMessage()
             {
                 flyingLegs = false;
                 mode = 1;
-                continuous = false;
             }
             else if (line->getItemAtIndex(0) == "Move backwards")
             {
                 flyingLegs = true;
                 mode = 1;
-                continuous = false;
             }
             else if (line->getItemAtIndex(0) == "Continuous forwards")
             {
                 flyingLegs = false;
-                mode = 1;
-                continuous = true;
+                if (line->getItemAtIndex(1) == "true")
+                    mode = 2;
+                else if (line->getItemAtIndex(1) == "false")
+                    mode = 0;
             }
             else if (line->getItemAtIndex(0) == "Continuous backwards")
             {
                 flyingLegs = true;
-                mode = 1;
-                continuous = true;
+                if (line->getItemAtIndex(1) == "true")
+                    mode = 2;
+                else if (line->getItemAtIndex(1) == "false")
+                    mode = 0;
             }
             else if (line->getItemAtIndex(0) == "Update height and width")
             {
@@ -359,11 +361,12 @@ void readMessage()
             else if (line->getItemAtIndex(0) == "Stop")
             {
                 if (line->getItemAtIndex(1) == "true")
-                    stop = false;
-                else if (line->getItemAtIndex(1) == "false")
                     stop = true;
-                continuous = false;
+                else if (line->getItemAtIndex(1) == "false")
+                    stop = false;
             }
+            else if (line->getItemAtIndex(0) == "Stand")
+                mode = 3;
         }
     }
 }
@@ -419,18 +422,14 @@ void loop()
     switch (mode)
     {
     case 1:
-        // walk
-        if (!continuous)
-        {
-            for (int i = 0; i < 5; i++)
-                move();
-            mode = 0;
-        }
-        else
+        // walk a bit
+        for (int i = 0; i < 5; i++)
             move();
+        mode = 0;
         break;
     case 2:
-        // walk to stand
+        // continuous walk
+        move();
         break;
     case 3:
         // stand
@@ -441,6 +440,10 @@ void loop()
             // TODO: do motors one by one if they go too hard poggers
             leg *local_leg = &legSwitch(sequence[i]);
             local_leg->D.x = width;
+            local_leg->D.z = height + 10; // so legs dont move on ground <3
+            leg_angle(sequence[i]);
+            legWrite(local_leg, sequence[i]);
+            delay(50);
             local_leg->D.z = height;
             leg_angle(sequence[i]);
             legWrite(local_leg, sequence[i]);
@@ -450,7 +453,7 @@ void loop()
         mode = 0;
         break;
     case 4:
-        // stand to walk
+        // walk to stand
 
         break;
     }
