@@ -30,6 +30,10 @@ bool flyingLegs = false;
 
 bool continuous;
 
+bool allowPrint = false;
+
+int sequence[6] = {3, 1, 6, 4, 2, 5};
+
 // if we have already sent data for first sync
 bool syncData = false;
 
@@ -233,9 +237,8 @@ void servoWait(int legNum = 0)
     int tempLegNum = 1;
     do
     {
+        waiting = false;
         if (legNum != 0) // for a given legNum
-        {
-            waiting = false;
             while (motorNum <= 3 && waiting == false)
             {
                 int difference = legSwitch(legNum).motorSwitch(motorNum).angle - legSwitch(legNum).motorSwitch(motorNum).servo.read();
@@ -244,10 +247,7 @@ void servoWait(int legNum = 0)
                 if (!waiting)
                     motorNum++;
             }
-        }
         else // for no given leg, ie. all legs
-        {
-            waiting = false;
             while (tempLegNum <= 6 && waiting == false)
             {
                 while (motorNum <= 3 && waiting == false)
@@ -264,11 +264,10 @@ void servoWait(int legNum = 0)
                     motorNum = 1;
                 }
             }
-        }
         wait = waiting;
         delay(50);
         if (wait)
-            Serial.println("Servo Wait...");
+            serialPrint("Servo Wait...");
     } while (wait);
 }
 
@@ -283,8 +282,7 @@ void legWrite(leg *Leg, int legNum)
     Leg->motor3.servo.write(Leg->motor3.angle);
 
     // Print to Serial
-    String buffer;
-    buffer.concat("Leg: ");
+    String buffer = "Leg: ";
     buffer.concat(legNum);
     buffer.concat(" motor1: ");
     buffer.concat(Leg->motor1.angle);
@@ -292,7 +290,7 @@ void legWrite(leg *Leg, int legNum)
     buffer.concat(Leg->motor2.angle);
     buffer.concat(" motor3: ");
     buffer.concat(Leg->motor3.angle);
-    Serial.println(buffer);
+    serialPrint(buffer);
 
     servoWait(legNum);
 
@@ -306,21 +304,24 @@ void servoWrite()
 {
     for (int legN = 1; legN <= 6; legN++)
         legWrite(&legSwitch(legN), legN);
-    Serial.println();
+    serialPrint("");
 }
 
 void readMessage()
 {
     if (Serial1.available() > 0) // on message recieved via bluetooth
     {
+        String buffer;
         String input = Serial1.readString();
         StringSplitter *recievedLine = new StringSplitter(input, '~', 5);
 
         for (int i = 0; i < recievedLine->getItemCount() && recievedLine->getItemAtIndex(i).length() > 0; i++) //  && text->getItemAtIndex(i).length() > 0
         {
             StringSplitter *line = new StringSplitter(recievedLine->getItemAtIndex(i), '&', 3);
-            Serial.print("Reading: ");
-            Serial.println(line->getItemAtIndex(0));
+
+            buffer = "Reading: ";
+            buffer.concat(line->getItemAtIndex(0));
+            serialPrint(buffer);
             if (line->getItemAtIndex(0) == "Move forwards")
             {
                 flyingLegs = false;
@@ -337,7 +338,7 @@ void readMessage()
                 if (line->getItemAtIndex(1) == "true")
                     mode = 2;
                 else if (line->getItemAtIndex(1) == "false")
-                    mode = 0;
+                    mode = 3;
             }
             else if (line->getItemAtIndex(0) == "Continuous backwards")
             {
@@ -345,18 +346,28 @@ void readMessage()
                 if (line->getItemAtIndex(1) == "true")
                     mode = 2;
                 else if (line->getItemAtIndex(1) == "false")
-                    mode = 0;
+                    mode = 3;
             }
             else if (line->getItemAtIndex(0) == "Update height and width")
             {
-                Serial.print(arduinoHeight);
-                Serial.print(" -> ");
+                buffer = arduinoHeight;
+                buffer.concat(" -> ");
                 arduinoHeight = line->getItemAtIndex(1).toFloat();
-                Serial.println(arduinoHeight);
-                Serial.print(arduinoWidth);
-                Serial.print(" -> ");
+                buffer.concat(arduinoHeight);
+                serialPrint(buffer);
+                buffer = arduinoWidth;
+                buffer.concat(" -> ");
                 arduinoWidth = line->getItemAtIndex(2).toFloat();
-                Serial.println(arduinoWidth);
+                buffer.concat(arduinoWidth);
+                serialPrint(buffer);
+                mode = 4;
+            }
+            else if (line->getItemAtIndex(0) == "Serial print")
+            {
+                if (line->getItemAtIndex(1) == "true")
+                    allowPrint = true;
+                else if (line->getItemAtIndex(1) == "false")
+                    allowPrint = false;
             }
             else if (line->getItemAtIndex(0) == "Stop")
             {
@@ -376,13 +387,15 @@ void sendMessage()
     if (!syncData && digitalRead(bluetooth) == HIGH) // if we havent synced and have connected to bluetooth
     {
         String buffer;
-        Serial.println("Sending data");
+        serialPrint("Sending data");
         buffer = "##width:";
         buffer.concat(width);
         buffer.concat("##height:");
         buffer.concat(height);
         buffer.concat("##stop:");
         buffer.concat(stop);
+        buffer.concat("##print:");
+        buffer.concat(allowPrint);
         buffer.concat("~");
         Serial1.print(buffer);
         syncData = true;
@@ -390,6 +403,12 @@ void sendMessage()
 
     if (digitalRead(bluetooth) == LOW) // if bluetooth device is disconnected reset sync data
         syncData = false;
+}
+
+void serialPrint(String output)
+{
+    if (allowPrint)
+        Serial.println(output);
 }
 
 void legValues();
@@ -404,7 +423,7 @@ void setup()
     legValues();
     initServo();
 
-    Serial.println("Startup");
+    serialPrint("Startup");
     mode = 3;
     steps = 10;
     width = 120; // APP:
@@ -425,7 +444,7 @@ void loop()
         // walk a bit
         for (int i = 0; i < 5; i++)
             move();
-        mode = 0;
+        mode = 3;
         break;
     case 2:
         // continuous walk
@@ -434,13 +453,12 @@ void loop()
     case 3:
         // stand
         stance('n');
-        int sequence[6] = {3, 1, 6, 4, 2, 5};
         for (int i = 0; i < 6; i++)
         {
             // TODO: do motors one by one if they go too hard poggers
             leg *local_leg = &legSwitch(sequence[i]);
             local_leg->D.x = width;
-            local_leg->D.z = height + 10; // so legs dont move on ground <3
+            local_leg->D.z = height - 10; // so legs dont move on ground <3
             leg_angle(sequence[i]);
             legWrite(local_leg, sequence[i]);
             delay(50);
@@ -449,12 +467,36 @@ void loop()
             legWrite(local_leg, sequence[i]);
             delay(200); // looks better?
         }
-        Serial.println();
+        serialPrint("");
         mode = 0;
         break;
     case 4:
-        // walk to stand
-
+        // update heigth and width
+        width = arduinoWidth;
+        for (int i = 0; i < 6; i++)
+        {
+            // TODO: do motors one by one if they go too hard poggers
+            leg *local_leg = &legSwitch(sequence[i]);
+            local_leg->D.x = width;
+            local_leg->D.z = height - 10; // so legs dont move on ground <3
+            leg_angle(sequence[i]);
+            legWrite(local_leg, sequence[i]);
+            delay(200);
+            local_leg->D.z = height;
+            leg_angle(sequence[i]);
+            legWrite(local_leg, sequence[i]);
+            delay(400); // looks better?
+        }
+        height = arduinoHeight;
+        for (int i = 0; i < 6; i++)
+        {
+            leg *local_leg = &legSwitch(sequence[i]);
+            local_leg->D.z = height;
+            leg_angle(sequence[i]);
+        }
+        servoWrite();
+        serialPrint("");
+        mode = 0;
         break;
     }
 }
