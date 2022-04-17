@@ -33,6 +33,9 @@ bool continuous;
 bool allowPrint = false;
 
 int sequence[6] = {3, 1, 6, 4, 2, 5};
+// Mr Ki: tweak
+int speed[6] = {0, 25, 35, 50, 65, 80}; // array of speed values
+int currentSpeed = 3;                   // array address values / -1
 
 // if we have already sent data for first sync
 bool syncData = false;
@@ -174,7 +177,7 @@ void move()
                 local_leg->D.x = width + 4 * offset;
                 local_leg->D.z = height - 12 * offset;
             }
-            // why this?
+            // why this? dunno fuck it mega works
             if (leg == 3 || leg == 4)
                 legRotation(leg, !moveBackwards);
             else
@@ -225,7 +228,7 @@ void angleFix(int legNum)
     Leg->motor3.angle = abs(Leg->motor3.angle);
     Leg->motor1.angle = 90 - Leg->motor1.angle;
     if (legNum == 4)
-        Leg->motor2.angle -= 14;
+        Leg->motor2.angle -= 14; // Mr Ki:
 }
 
 // ARDUINO:
@@ -265,7 +268,7 @@ void servoWait(int legNum = 0)
                 }
             }
         wait = waiting;
-        delay(50);
+        delay(speed[currentSpeed]);
         if (wait)
             serialPrint("Servo Wait...");
     } while (wait);
@@ -362,6 +365,8 @@ void readMessage()
                 serialPrint(buffer);
                 mode = 4;
             }
+            else if (line->getItemAtIndex(0) == "Speed change")
+                currentSpeed = (int)line->getItemAtIndex(1).toFloat(); // Mr Ki:
             else if (line->getItemAtIndex(0) == "Serial print")
             {
                 if (line->getItemAtIndex(1) == "true")
@@ -396,6 +401,8 @@ void sendMessage()
         buffer.concat(stop);
         buffer.concat("##print:");
         buffer.concat(allowPrint);
+        buffer.concat("##speed:");
+        buffer.concat(currentSpeed);
         buffer.concat("~");
         Serial1.print(buffer);
         syncData = true;
@@ -413,7 +420,6 @@ void serialPrint(String output)
 
 void legValues();
 
-// TODO: bluetooth variable change
 void setup()
 {
     Serial.begin(115200);
@@ -450,22 +456,22 @@ void loop()
         // continuous walk
         move();
         break;
+    // TODO: fix rapid movement on case 3 and 4
     case 3:
         // stand
         stance('n');
         for (int i = 0; i < 6; i++)
         {
-            // TODO: do motors one by one if they go too hard poggers
             leg *local_leg = &legSwitch(sequence[i]);
             local_leg->D.x = width;
             local_leg->D.z = height - 10; // so legs dont move on ground <3
             leg_angle(sequence[i]);
             legWrite(local_leg, sequence[i]);
-            delay(50);
+            delay(speed[currentSpeed]);
             local_leg->D.z = height;
             leg_angle(sequence[i]);
             legWrite(local_leg, sequence[i]);
-            delay(200); // looks better?
+            delay(speed[currentSpeed] * 7); // Mr Ki: try without
         }
         serialPrint("");
         mode = 0;
@@ -475,17 +481,16 @@ void loop()
         width = arduinoWidth;
         for (int i = 0; i < 6; i++)
         {
-            // TODO: do motors one by one if they go too hard poggers
             leg *local_leg = &legSwitch(sequence[i]);
             local_leg->D.x = width;
             local_leg->D.z = height - 10; // so legs dont move on ground <3
             leg_angle(sequence[i]);
             legWrite(local_leg, sequence[i]);
-            delay(200);
+            delay(speed[currentSpeed] * 5); // Mr Ki: tweak
             local_leg->D.z = height;
             leg_angle(sequence[i]);
             legWrite(local_leg, sequence[i]);
-            delay(400); // looks better?
+            delay(speed[currentSpeed] * 10); // Mr Ki: tweak / try without
         }
         height = arduinoHeight;
         for (int i = 0; i < 6; i++)
