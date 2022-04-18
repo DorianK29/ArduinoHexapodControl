@@ -1,39 +1,45 @@
 #include <hexapod.h>
 
 using namespace std;
+// Mr Ki: UPDATE hexapod.h
 
+/**     _____
+ * leg1 | ^ | leg2
+ * leg3 | | | leg4
+ * leg5 |___| leg6
+ */
 leg leg1, leg2, leg3, leg4, leg5, leg6;
 
 // number of points in range to calculate
 int steps;
 
-/**
- * 1 = walk
+/**1 = walk
  * 2 = walk to stand
  * 3 = stand
  * 4 = stand to walk
  */
 int mode;
 
-// širina hoda robota
+// walking width (distance from the center of body to the ground contact point), y-axis
 float width, arduinoWidth;
-// visina hoda robota
+// walking height (distance from the center of body to the ground contact point), z-axis, downwards is positive
 float height, arduinoHeight;
 
+// are legs 1, 4, 5 moving backwards
 bool moveBackwards = false;
 
-/**
+/**which legs won't be touching the ground
  * false = 1,4,5
  * true = 2,3,6
  */
 bool flyingLegs = false;
 
-bool continuous;
+bool continuous; // move continuously
 
-bool allowPrint = false;
+bool allowPrint = false; // allow printing
 
-int sequence[6] = {3, 1, 6, 4, 2, 5};
-// Mr Ki: tweak
+int sequence[6] = {3, 1, 6, 4, 2, 5}; // sequence of which the legs move when setting back to standing position
+// Mr Ki: tweak speed values
 int speed[6] = {0, 25, 35, 50, 65, 80}; // array of speed values
 int currentSpeed = 3;                   // array address values / -1
 
@@ -43,9 +49,9 @@ bool syncData = false;
 // stop everything
 bool stop = true;
 
+// bluetooth module pin
 int bluetooth = 44;
 
-// ARDUINO:
 // TEST: Try with min max values
 void initServo()
 {
@@ -113,7 +119,8 @@ leg &legSwitch(int i)
     }
 }
 
-// izracunaj motor2.angle i motor3.angle, ako imamo poziciju noge na x,z + motor1.angle
+// get motor2 and motor3
+// with height, width and motor1's angle
 void leg_angle(int legNum)
 {
     float leg_pos;
@@ -148,24 +155,31 @@ void leg_angle(int legNum)
         leg->motor3.angle = pow(-1, legNum) * (PI - acos((pow(joint2, 2) + pow(joint3, 2) - pow(leg->L.length(), 2)) / (2 * joint2 * joint3)));
 }
 
-// rotating the leg based on bool moveBackwards
+// increment current angle
 void legRotation(int legNum, bool backwards)
 {
     leg *local_leg = &legSwitch(legNum);
-    int local_range = abs(local_leg->motor1.max + (-1) * local_leg->motor1.min);
+    int local_range = abs(local_leg->motor1.max + (-1) * local_leg->motor1.min); // maximal range of movement
+    // add or substract the maximal range of movement divided by the amount of steps in a single back and forth cycle
     local_leg->motor1.angle += ((float)local_range / steps) * pow(-1, backwards);
-    leg_angle(legNum);
+    leg_angle(legNum); // calculate the angles of motor2 and motor3
 }
 
+// move a leg until it reaches its maximal or minimal allowed value
 void move()
 {
+    // when finishing a cycle the flying legs boolen needs to be reversed so the robot keeps moving in the same direction
+    // if it doesn't change he will go one gait forwards and then one gait backwards, and won't move anywhere
     leg *local_leg;
     bool max = false;
-    for (int i = 1; !max; i++)
+    for (int currentStep = 1; !max; currentStep++) // counts how many steps the robot is currently on
     {
-        for (int leg = 1; leg <= 6; leg++)
+        for (int leg = 1; leg <= 6; leg++) // for each leg
         {
             local_leg = &legSwitch(leg);
+            // set the appropriate width and height
+            // in one cycle legs 1, 4, 5 will be touching the ground
+            // and on the other cycle they will be in the air (flyingLegs)
             if ((leg == 1 || leg == 4 || leg == 5) == !flyingLegs)
             {
                 local_leg->D.x = width;
@@ -173,35 +187,38 @@ void move()
             }
             else
             {
-                float offset = pow(sin((float)i / steps * PI), 2 / 3);
+                // allows for a more gradual offset of legs
+                float offset = pow(sin((float)currentStep / steps * PI), 2 / 3);
                 local_leg->D.x = width + 4 * offset;
                 local_leg->D.z = height - 12 * offset;
             }
-            // why this? dunno fuck it mega works
+            // why this?
             if (leg == 3 || leg == 4)
                 legRotation(leg, !moveBackwards);
             else
                 legRotation(leg, moveBackwards);
-
+            // after calculating the needed leg angles
+            // change them to degrees so they can be compared to their minimal and maximal values
             local_leg->motorRadToDeg();
             // TODO: min and max values changed big sad maybe no wrok?
+            // if we have reached the maximal or minimal point of motor1's movement range
+            // switch which legs are in the air and change which legs are going backwards
             if (local_leg->motor1.angle > local_leg->motor1.max || local_leg->motor1.angle < local_leg->motor1.min)
                 max = true;
-            local_leg->motorDegToRad();
+            local_leg->motorDegToRad(); // change back to radians so they can be sent to their servos
         }
-        servoWrite();
+        servoWrite(); // write the calculated angle values to the servos
     }
-    flyingLegs = !flyingLegs;
-    moveBackwards = !moveBackwards;
+    flyingLegs = !flyingLegs;       // change which legs are touching the ground
+    moveBackwards = !moveBackwards; // change which legs are going backwards
 }
 
-// ARDUINO:
 // set stance of robot
 void stance(char stance)
 {
     switch (stance)
     {
-    case 'z': // angles at zero
+    case 'z': // motor1 at its minimal value
         leg1.motor1.angle = leg1.motor1.min;
         leg2.motor1.angle = leg2.motor1.min;
         leg3.motor1.angle = leg3.motor1.min;
@@ -209,7 +226,7 @@ void stance(char stance)
         leg5.motor1.angle = leg5.motor1.min;
         leg6.motor1.angle = leg6.motor1.min;
         break;
-    case 'n': // normal stance
+    case 'n': // motor1 in the middle of its allowed values
         leg1.motor1.angle = leg1.motor1.min + (leg1.motor1.max + (-1) * leg1.motor1.min) / 2;
         leg2.motor1.angle = leg2.motor1.min + (leg2.motor1.max + (-1) * leg2.motor1.min) / 2;
         leg3.motor1.angle = leg3.motor1.min + (leg3.motor1.max + (-1) * leg3.motor1.min) / 2;
@@ -220,7 +237,7 @@ void stance(char stance)
     }
 }
 
-// Leg angle fix CATIA to irl model
+// change CATIA angles to robot angles
 void angleFix(int legNum)
 {
     leg *Leg = &legSwitch(legNum);
@@ -231,47 +248,44 @@ void angleFix(int legNum)
         Leg->motor2.angle -= 14; // Mr Ki:
 }
 
-// ARDUINO:
+// TODO: continue comments
+
+// wait for given leg
+void motorWait(int legNum)
+{
+    int motorNum = 1;
+    bool waiting = false;
+    while (motorNum <= 3)
+    {
+        motor currentMotor = legSwitch(legNum).motorSwitch(motorNum);
+        int calcAngle = currentMotor.angle;
+        int servoAngle = currentMotor.servo.read();
+        int difference = calcAngle - servoAngle;
+        // if motor is not in position wait
+        // a motor is in postition if the difference is less than 1 degree
+        if (difference >= 1)
+            waiting = true;
+        if (waiting)
+            serialPrint("Servo Wait...");
+        else // when current motor is in position go to the next motor
+        {
+            motorNum++;
+            waiting = false;
+        }
+    }
+}
+
+// Mr Ki: might be broken
+// wait for a given leg if given a legNum
+// if not given anything wait for all legs
 void servoWait(int legNum = 0)
 {
-    bool wait = true;
-    bool waiting;
-    int motorNum = 1;
-    int tempLegNum = 1;
-    do
-    {
-        waiting = false;
-        if (legNum != 0) // for a given legNum
-            while (motorNum <= 3 && waiting == false)
-            {
-                int difference = legSwitch(legNum).motorSwitch(motorNum).angle - legSwitch(legNum).motorSwitch(motorNum).servo.read();
-                if (difference >= 1)
-                    waiting = true;
-                if (!waiting)
-                    motorNum++;
-            }
-        else // for no given leg, ie. all legs
-            while (tempLegNum <= 6 && waiting == false)
-            {
-                while (motorNum <= 3 && waiting == false)
-                {
-                    int difference = legSwitch(tempLegNum).motorSwitch(motorNum).angle - legSwitch(tempLegNum).motorSwitch(motorNum).servo.read();
-                    if (difference >= 1)
-                        waiting = true;
-                    if (!waiting)
-                        motorNum++;
-                }
-                if (!waiting)
-                {
-                    tempLegNum++;
-                    motorNum = 1;
-                }
-            }
-        wait = waiting;
-        delay(speed[currentSpeed]);
-        if (wait)
-            serialPrint("Servo Wait...");
-    } while (wait);
+    if (legNum != 0) // for a given legNum
+        motorWait(legNum);
+    else // for no given leg, ie. all legs
+        for (int tempLegNum = 1; tempLegNum <= 6; tempLegNum++)
+            motorWait(tempLegNum);
+    delay(speed[currentSpeed]);
 }
 
 void legWrite(leg *Leg, int legNum)
@@ -302,7 +316,6 @@ void legWrite(leg *Leg, int legNum)
     // angleFix(legNum, true);
 }
 
-// ARDUINO:
 void servoWrite()
 {
     for (int legN = 1; legN <= 6; legN++)
@@ -432,8 +445,8 @@ void setup()
     serialPrint("Startup");
     mode = 3;
     steps = 10;
-    width = 120; // APP:
-    height = 80; // APP:
+    width = 120;
+    height = 80;
 }
 
 void loop()
