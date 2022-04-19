@@ -8,5 +8,5 @@
             "-D__AVR_ATmega2560__"
         ]
     ],
-    "port": "COM3"
+    "port": "COM5"
 }

@@ -1,7 +1,6 @@
 #include <hexapod.h>
 
 using namespace std;
-// Mr Ki: UPDATE hexapod.h
 
 /**     _____
  * leg1 | ^ | leg2
@@ -79,18 +78,18 @@ void initServo()
     leg2.motor1.servo.attach(23);
     leg2.motor2.servo.attach(25);
     leg2.motor3.servo.attach(27);
-    leg3.motor1.servo.attach(28);
-    leg3.motor2.servo.attach(30);
-    leg3.motor3.servo.attach(32);
-    leg4.motor1.servo.attach(29);
-    leg4.motor2.servo.attach(31);
-    leg4.motor3.servo.attach(33);
-    leg5.motor1.servo.attach(22);
-    leg5.motor2.servo.attach(24);
-    leg5.motor3.servo.attach(26);
-    leg6.motor1.servo.attach(35);
-    leg6.motor2.servo.attach(37);
-    leg6.motor3.servo.attach(39);
+    leg4.motor1.servo.attach(28);
+    leg4.motor2.servo.attach(30);
+    leg4.motor3.servo.attach(32);
+    leg3.motor1.servo.attach(29);
+    leg3.motor2.servo.attach(31);
+    leg3.motor3.servo.attach(33);
+    leg6.motor1.servo.attach(22);
+    leg6.motor2.servo.attach(24);
+    leg6.motor3.servo.attach(26);
+    leg5.motor1.servo.attach(35);
+    leg5.motor2.servo.attach(37);
+    leg5.motor3.servo.attach(39);
 }
 
 // leg switch case
@@ -125,10 +124,24 @@ void leg_angle(int legNum)
 {
     float leg_pos;
     leg *leg = &legSwitch(legNum);
-    if (legNum == 1 || legNum == 2 || legNum == 3 || legNum == 4)
+    if (legNum == 1 || legNum == 2)
         leg_pos = -1;
     else if (legNum == 5 || legNum == 6)
         leg_pos = 1;
+    else if (legNum == 3)
+    {
+        if (leg->motor1.angle >= 0)
+            leg_pos = -1;
+        else
+            leg_pos = 1;
+    }
+    else if (legNum == 4)
+    {
+        if (leg->motor1.angle >= 0)
+            leg_pos = 1;
+        else
+            leg_pos = -1;
+    }
 
     leg->motor1.DegToRad();
 
@@ -147,8 +160,7 @@ void leg_angle(int legNum)
 
     float P = atan(leg->L.z / (sqrt(leg->L.x * leg->L.x + leg->L.y * leg->L.y)));
     float R = asin((leg->L.z - leg->l.z) / leg->l.length());
-
-    leg->motor2.angle = PI / 2 + pow(-1, legNum) * (acos((pow(joint2, 2) + pow(leg->L.length(), 2) - pow(joint3, 2)) / (2 * joint2 * leg->L.length())) - (P + R));
+    leg->motor2.angle = PI / 2 + pow(-1, legNum + 1) * (acos((pow(joint2, 2) + pow(leg->L.length(), 2) - pow(joint3, 2)) / (2 * joint2 * leg->L.length())) - (P + R));
     if (legNum % 2 == 0) // for even legs
         leg->motor3.angle = pow(-1, legNum) * (acos((pow(joint2, 2) + pow(joint3, 2) - pow(leg->L.length(), 2)) / (2 * joint2 * joint3)));
     else // for odd legs
@@ -190,7 +202,7 @@ void move()
                 // allows for a more gradual offset of legs
                 float offset = pow(sin((float)currentStep / steps * PI), 2 / 3);
                 local_leg->D.x = width + 4 * offset;
-                local_leg->D.z = height - 12 * offset;
+                local_leg->D.z = height - 18 * offset;
             }
             // why this?
             if (leg == 3 || leg == 4)
@@ -244,8 +256,13 @@ void angleFix(int legNum)
 
     Leg->motor3.angle = abs(Leg->motor3.angle);
     Leg->motor1.angle = 90 - Leg->motor1.angle;
-    if (legNum == 4)
-        Leg->motor2.angle -= 14; // Mr Ki:
+    // Mr Ki:
+    if (legNum == 3)
+        Leg->motor2.angle -= 19;
+    else if (legNum == 4)
+        Leg->motor2.angle += 5;
+    else if (legNum == 5)
+        Leg->motor3.angle -= 5;
 }
 
 // TODO: continue comments
@@ -275,7 +292,6 @@ void motorWait(int legNum)
     }
 }
 
-// Mr Ki: might be broken
 // wait for a given leg if given a legNum
 // if not given anything wait for all legs
 void servoWait(int legNum = 0)
@@ -427,8 +443,8 @@ void sendMessage()
 
 void serialPrint(String output)
 {
-    if (allowPrint)
-        Serial.println(output);
+    // if (allowPrint)
+    Serial.println(output);
 }
 
 void legValues();
@@ -445,8 +461,8 @@ void setup()
     serialPrint("Startup");
     mode = 3;
     steps = 10;
-    width = 120;
-    height = 80;
+    width = 100;
+    height = 90;
 }
 
 void loop()
@@ -477,14 +493,14 @@ void loop()
         {
             leg *local_leg = &legSwitch(sequence[i]);
             local_leg->D.x = width;
-            local_leg->D.z = height - 10; // so legs dont move on ground <3
+            local_leg->D.z = height - 20; // so legs dont move on ground <3
             leg_angle(sequence[i]);
             legWrite(local_leg, sequence[i]);
             delay(speed[currentSpeed]);
             local_leg->D.z = height;
             leg_angle(sequence[i]);
             legWrite(local_leg, sequence[i]);
-            delay(speed[currentSpeed] * 7); // Mr Ki: try without
+            delay(speed[currentSpeed] * 9);
         }
         serialPrint("");
         mode = 0;
@@ -523,36 +539,36 @@ void loop()
 void legValues()
 {
     leg1.motor1.min = 10;
-    leg1.motor1.max = 40;
+    leg1.motor1.max = 30;
     leg1.motor2.min = -60;
     leg1.motor2.max = 45;
     leg1.motor3.min = -160;
     leg1.motor3.max = 0;
-    leg2.motor1.min = -40;
+    leg2.motor1.min = -30;
     leg2.motor1.max = -10;
     leg2.motor2.min = -45;
     leg2.motor2.max = 60;
     leg2.motor3.min = 0;
     leg2.motor3.max = 160;
-    leg3.motor1.min = 0;
-    leg3.motor1.max = 20;
+    leg3.motor1.min = -10;
+    leg3.motor1.max = 10;
     leg3.motor2.min = -60;
     leg3.motor2.max = 45;
     leg3.motor3.min = -160;
     leg3.motor3.max = 0;
-    leg4.motor1.min = -20;
-    leg4.motor1.max = 0;
+    leg4.motor1.min = -10;
+    leg4.motor1.max = 10;
     leg4.motor2.min = -45;
     leg4.motor2.max = 60;
     leg4.motor3.min = 0;
     leg4.motor3.max = 160;
     leg5.motor1.min = -30;
-    leg5.motor1.max = 15;
+    leg5.motor1.max = -10;
     leg5.motor2.min = -60;
     leg5.motor2.max = 45;
     leg5.motor3.min = -160;
     leg5.motor3.max = 0;
-    leg6.motor1.min = -15;
+    leg6.motor1.min = 10;
     leg6.motor1.max = 30;
     leg6.motor2.min = -45;
     leg6.motor2.max = 60;
