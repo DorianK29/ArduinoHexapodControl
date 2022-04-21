@@ -35,7 +35,7 @@ bool flyingLegs = false;
 
 bool continuous; // move continuously
 
-bool allowPrint = false; // allow printing
+bool allowPrint = true; // allow printing
 
 int sequence[6] = {3, 1, 6, 4, 2, 5}; // sequence of which the legs move when setting back to standing position
 // Mr Ki: tweak speed values
@@ -265,25 +265,26 @@ void angleFix(int legNum)
         Leg->motor3.angle -= 5;
 }
 
-// TODO: continue comments
-
 // wait for given leg
 void motorWait(int legNum)
 {
     int motorNum = 1;
-    bool waiting = false;
     while (motorNum <= 3)
     {
+        bool waiting = false; // reset value
         motor currentMotor = legSwitch(legNum).motorSwitch(motorNum);
-        int calcAngle = currentMotor.angle;
-        int servoAngle = currentMotor.servo.read();
-        int difference = calcAngle - servoAngle;
+        int calcAngle = currentMotor.angle;         // calculated angle
+        int servoAngle = currentMotor.servo.read(); // current angle on servo motor
+        int difference = calcAngle - servoAngle;    // difference between the calculated angle and the servo motor
         // if motor is not in position wait
         // a motor is in postition if the difference is less than 1 degree
         if (difference >= 1)
             waiting = true;
         if (waiting)
-            serialPrint("Servo Wait...");
+        {
+            serialPrint("Servo Wait..."); // print wait if the difference is more than 1 degree
+            delay(speed[currentSpeed]);
+        }
         else // when current motor is in position go to the next motor
         {
             motorNum++;
@@ -301,20 +302,21 @@ void servoWait(int legNum = 0)
     else // for no given leg, ie. all legs
         for (int tempLegNum = 1; tempLegNum <= 6; tempLegNum++)
             motorWait(tempLegNum);
-    delay(speed[currentSpeed]);
 }
 
+// write calculated values to all servos of a leg
 void legWrite(leg *Leg, int legNum)
 {
-    Leg->motorRadToDeg();
+    Leg->motorRadToDeg(); // change calculated angle to degrees
 
-    angleFix(legNum);
+    angleFix(legNum); // correct angles
 
+    // write calculated angles to the servo motors
     Leg->motor1.servo.write(Leg->motor1.angle);
     Leg->motor2.servo.write(Leg->motor2.angle);
     Leg->motor3.servo.write(Leg->motor3.angle);
 
-    // Print to Serial
+    // print to serial
     String buffer = "Leg: ";
     buffer.concat(legNum);
     buffer.concat(" motor1: ");
@@ -325,13 +327,13 @@ void legWrite(leg *Leg, int legNum)
     buffer.concat(Leg->motor3.angle);
     serialPrint(buffer);
 
+    // wait for the servo to reach the calculated angle
     servoWait(legNum);
 
-    angleFix(legNum);
-
-    // angleFix(legNum, true);
+    angleFix(legNum); // Mr Ki: try remove
 }
 
+// write calculated values to all legs
 void servoWrite()
 {
     for (int legN = 1; legN <= 6; legN++)
@@ -339,6 +341,7 @@ void servoWrite()
     serialPrint("");
 }
 
+// read message from bluetooth
 void readMessage()
 {
     if (Serial1.available() > 0) // on message recieved via bluetooth
@@ -395,7 +398,7 @@ void readMessage()
                 mode = 4;
             }
             else if (line->getItemAtIndex(0) == "Speed change")
-                currentSpeed = (int)line->getItemAtIndex(1).toFloat(); // Mr Ki:
+                currentSpeed = (int)line->getItemAtIndex(1).toFloat();
             else if (line->getItemAtIndex(0) == "Serial print")
             {
                 if (line->getItemAtIndex(1) == "true")
@@ -416,9 +419,10 @@ void readMessage()
     }
 }
 
+// send message to bluetooth
 void sendMessage()
 {
-    if (!syncData && digitalRead(bluetooth) == HIGH) // if we havent synced and have connected to bluetooth
+    if (!syncData && digitalRead(bluetooth) == HIGH) // if we havent synced and have connected to a bluetooth device
     {
         String buffer;
         serialPrint("Sending data");
@@ -437,13 +441,14 @@ void sendMessage()
         syncData = true;
     }
 
-    if (digitalRead(bluetooth) == LOW) // if bluetooth device is disconnected reset sync data
+    if (digitalRead(bluetooth) == LOW) // if bluetooth device is disconnected make it so we can sync again
         syncData = false;
 }
 
+// print to serial if its allowed
 void serialPrint(String output)
 {
-    // if (allowPrint)
+    // if (allowPrint) // if we have allowed printing print given string
     Serial.println(output);
 }
 
@@ -451,26 +456,29 @@ void legValues();
 
 void setup()
 {
-    Serial.begin(115200);
-    Serial1.begin(9600);
-    Serial1.setTimeout(20);
+    Serial.begin(115200);   // setup serial to baud rate 115200
+    Serial1.begin(9600);    // setup bluetooth to baud rate 9600
+    Serial1.setTimeout(20); // lower delay on bluetooth transmition
 
-    legValues();
-    initServo();
+    legValues(); // set leg min, max, joint values
+    initServo(); // attach servos to pins
 
-    serialPrint("Startup");
-    mode = 3;
-    steps = 10;
-    width = 100;
-    height = 90;
+    serialPrint("Startup"); // print startup to serial
+    allowPrint = false;     // after printing startup disable printing until recieving data from bluetooth
+    mode = 3;               // start in standing mode
+    steps = 10;             // number of steps in a movement from min to max angle
+    width = 100;            // width of gait
+    height = 90;            // height of gait
 }
 
 void loop()
 {
+    // every cycle check if any new bluetooth data recieved
+    // check if a bluetooth device has reconnected and sync data
     sendMessage();
     readMessage();
 
-    if (stop)
+    if (stop) // TODO: stop button functionality
         return;
 
     switch (mode)
@@ -479,7 +487,7 @@ void loop()
         // walk a bit
         for (int i = 0; i < 5; i++)
             move();
-        mode = 3;
+        mode = 3; // after finishing movement stand
         break;
     case 2:
         // continuous walk
@@ -488,12 +496,32 @@ void loop()
     // TODO: fix rapid movement on case 3 and 4
     case 3:
         // stand
-        stance('n');
+        stance('n'); // set motor1 angles to their center value
         for (int i = 0; i < 6; i++)
         {
             leg *local_leg = &legSwitch(sequence[i]);
+            local_leg->D.x = width;           // set width of walking
+            local_leg->D.z = height - 20;     // set height of walking to 20 above of desired point so legs dont drag on the ground
+            leg_angle(sequence[i]);           // calculate motor2 and motor3 angles
+            legWrite(local_leg, sequence[i]); // write calculated values to leg servos
+            delay(speed[currentSpeed]);       // delay to make movement smoother
+            local_leg->D.z = height;          // set height of walking to desired value
+            leg_angle(sequence[i]);           // calculate motor2 and motor3 angles
+            legWrite(local_leg, sequence[i]); // write calculated values to leg servos
+            delay(speed[currentSpeed] * 9);   // delay between movement of different legs
+        }
+        serialPrint(""); // print new line
+        mode = 0;        // wait until further input
+        break;
+    case 4:
+        // update heigth and width
+        width = arduinoWidth; // set width to arduino inputed width and move legs one by one
+        for (int i = 0; i < 6; i++)
+        {
+            // same as mode 3
+            leg *local_leg = &legSwitch(sequence[i]);
             local_leg->D.x = width;
-            local_leg->D.z = height - 20; // so legs dont move on ground <3
+            local_leg->D.z = height - 20;
             leg_angle(sequence[i]);
             legWrite(local_leg, sequence[i]);
             delay(speed[currentSpeed]);
@@ -502,35 +530,16 @@ void loop()
             legWrite(local_leg, sequence[i]);
             delay(speed[currentSpeed] * 9);
         }
-        serialPrint("");
-        mode = 0;
-        break;
-    case 4:
-        // update heigth and width
-        width = arduinoWidth;
+        height = arduinoHeight; // set heigth to arduino inputed height and move legs all at the same time
         for (int i = 0; i < 6; i++)
         {
             leg *local_leg = &legSwitch(sequence[i]);
-            local_leg->D.x = width;
-            local_leg->D.z = height - 10; // so legs dont move on ground <3
-            leg_angle(sequence[i]);
-            legWrite(local_leg, sequence[i]);
-            delay(speed[currentSpeed] * 5); // Mr Ki: tweak
-            local_leg->D.z = height;
-            leg_angle(sequence[i]);
-            legWrite(local_leg, sequence[i]);
-            delay(speed[currentSpeed] * 10); // Mr Ki: tweak / try without
+            local_leg->D.z = height; // set new height for each leg
+            leg_angle(sequence[i]);  // calculate other motor angles for each leg
         }
-        height = arduinoHeight;
-        for (int i = 0; i < 6; i++)
-        {
-            leg *local_leg = &legSwitch(sequence[i]);
-            local_leg->D.z = height;
-            leg_angle(sequence[i]);
-        }
-        servoWrite();
-        serialPrint("");
-        mode = 0;
+        servoWrite();    // write to all legs at the same time
+        serialPrint(""); // print new line
+        mode = 0;        // wait until further input
         break;
     }
 }
