@@ -39,8 +39,8 @@ bool allowPrint = true; // allow printing
 
 int sequence[6] = {3, 1, 6, 4, 2, 5}; // sequence of which the legs move when setting back to standing position
 // Mr Ki: tweak speed values
-int speed[6] = {0, 25, 35, 50, 65, 80}; // array of speed values
-int currentSpeed = 3;                   // array address values / -1
+int speed[6] = {0, 5, 20, 35, 50, 65}; // array of speed values
+int currentSpeed = 3;                  // array address values / -1
 
 // if we have already sent data for first sync
 bool syncData = false;
@@ -200,11 +200,10 @@ void move()
             else
             {
                 // allows for a more gradual offset of legs
-                float offset = pow(sin((float)currentStep / steps * PI), 2 / 3);
-                local_leg->D.x = width + 4 * offset;
-                local_leg->D.z = height - 18 * offset;
+                float offset = pow(sin((float)currentStep / steps * PI), 2 / 9);
+                local_leg->D.x = width;
+                local_leg->D.z = height - 20 * offset;
             }
-            // why this?
             if (leg == 3 || leg == 4)
                 legRotation(leg, !moveBackwards);
             else
@@ -283,7 +282,6 @@ void motorWait(int legNum)
         if (waiting)
         {
             serialPrint("Servo Wait..."); // print wait if the difference is more than 1 degree
-            delay(speed[currentSpeed]);
         }
         else // when current motor is in position go to the next motor
         {
@@ -291,6 +289,7 @@ void motorWait(int legNum)
             waiting = false;
         }
     }
+    delay(speed[currentSpeed]);
 }
 
 // wait for a given leg if given a legNum
