@@ -42,6 +42,10 @@ int sequence[6] = {3, 1, 6, 4, 2, 5}; // sequence of which the legs move when se
 int speed[6] = {0, 5, 20, 35, 50, 65}; // array of speed values
 int currentSpeed = 3;                  // array address values / -1
 
+float addedHeight = 20;
+float addedPi = 0;
+float addedRo = 0;
+
 // if we have already sent data for first sync
 bool syncData = false;
 
@@ -158,8 +162,8 @@ void leg_angle(int legNum)
     leg->L.y = leg->D.y + leg->s2.y; // depends on leg pos
     leg->L.z = leg->D.z + leg->s2.z; // D - s2 (s2 all legs negative)
 
-    float P = atan(leg->L.z / (sqrt(leg->L.x * leg->L.x + leg->L.y * leg->L.y)));
-    float R = asin((leg->L.z - leg->l.z) / leg->l.length());
+    float P = atan(leg->L.z / (sqrt(leg->L.x * leg->L.x + leg->L.y * leg->L.y))) + addedPi * DEG_TO_RAD;
+    float R = asin((leg->L.z - leg->l.z) / leg->l.length()) + addedRo * DEG_TO_RAD;
     leg->motor2.angle = PI / 2 + pow(-1, legNum + 1) * (acos((pow(joint2, 2) + pow(leg->L.length(), 2) - pow(joint3, 2)) / (2 * joint2 * leg->L.length())) - (P + R));
     if (legNum % 2 == 0) // for even legs
         leg->motor3.angle = pow(-1, legNum) * (acos((pow(joint2, 2) + pow(joint3, 2) - pow(leg->L.length(), 2)) / (2 * joint2 * joint3)));
@@ -202,7 +206,7 @@ void move()
                 // allows for a more gradual offset of legs
                 float offset = pow(sin((float)currentStep / steps * PI), 2 / 9);
                 local_leg->D.x = width;
-                local_leg->D.z = height - 20 * offset;
+                local_leg->D.z = height - addedHeight * offset;
             }
             if (leg == 3 || leg == 4)
                 legRotation(leg, !moveBackwards);
@@ -414,6 +418,27 @@ void readMessage()
             }
             else if (line->getItemAtIndex(0) == "Stand")
                 mode = 3;
+            else if (line->getItemAtIndex(0) == "Sit")
+                mode = 8;
+            else if (line->getItemAtIndex(0) == "Pi")
+            {
+                if (line->getItemAtIndex(1) == "+")
+                    addedPi += 2;
+                else if (line->getItemAtIndex(1) == "-")
+                    addedPi -= 2;
+            }
+            else if (line->getItemAtIndex(0) == "Ro")
+            {
+                if (line->getItemAtIndex(1) == "+")
+                    addedRo += 2;
+                else if (line->getItemAtIndex(1) == "-")
+                    addedRo -= 2;
+            }
+            else if (line->getItemAtIndex(0) == "ResetPiRo")
+            {
+                addedRo = 0;
+                addedPi = 0;
+            }
         }
     }
 }
@@ -482,6 +507,20 @@ void loop()
 
     switch (mode)
     {
+    case 8: // DEBUG: Stand on 3 legs
+        stance('n');
+        for (int i = 0; i < 6; i++)
+        {
+            leg *local_leg = &legSwitch(sequence[i]);
+            local_leg->D.x = width;
+            if (i % 2 == 0)
+                local_leg->D.z = height - addedHeight;
+            else
+                local_leg->D.z = height;
+            leg_angle(sequence[i]);
+            legWrite(local_leg, sequence[i]);
+        }
+        break;
     case 1:
         // walk a bit
         for (int i = 0; i < 5; i++)
@@ -499,15 +538,15 @@ void loop()
         for (int i = 0; i < 6; i++)
         {
             leg *local_leg = &legSwitch(sequence[i]);
-            local_leg->D.x = width;           // set width of walking
-            local_leg->D.z = height - 20;     // set height of walking to 20 above of desired point so legs dont drag on the ground
-            leg_angle(sequence[i]);           // calculate motor2 and motor3 angles
-            legWrite(local_leg, sequence[i]); // write calculated values to leg servos
-            delay(speed[currentSpeed]);       // delay to make movement smoother
-            local_leg->D.z = height;          // set height of walking to desired value
-            leg_angle(sequence[i]);           // calculate motor2 and motor3 angles
-            legWrite(local_leg, sequence[i]); // write calculated values to leg servos
-            delay(speed[currentSpeed] * 9);   // delay between movement of different legs
+            local_leg->D.x = width;                // set width of walking
+            local_leg->D.z = height - addedHeight; // set height of walking to 20 above of desired point so legs dont drag on the ground
+            leg_angle(sequence[i]);                // calculate motor2 and motor3 angles
+            legWrite(local_leg, sequence[i]);      // write calculated values to leg servos
+            delay(speed[currentSpeed]);            // delay to make movement smoother
+            local_leg->D.z = height;               // set height of walking to desired value
+            leg_angle(sequence[i]);                // calculate motor2 and motor3 angles
+            legWrite(local_leg, sequence[i]);      // write calculated values to leg servos
+            delay(speed[currentSpeed] * 9);        // delay between movement of different legs
         }
         serialPrint(""); // print new line
         mode = 0;        // wait until further input
@@ -520,7 +559,7 @@ void loop()
             // same as mode 3
             leg *local_leg = &legSwitch(sequence[i]);
             local_leg->D.x = width;
-            local_leg->D.z = height - 20;
+            local_leg->D.z = height - addedHeight;
             leg_angle(sequence[i]);
             legWrite(local_leg, sequence[i]);
             delay(speed[currentSpeed]);
