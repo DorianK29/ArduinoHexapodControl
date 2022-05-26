@@ -259,13 +259,16 @@ void angleFix(int legNum)
 
     Leg->motor3.angle = abs(Leg->motor3.angle);
     Leg->motor1.angle = 90 - Leg->motor1.angle;
-    // Mr Ki:
+    // Mr Ki: 
+
     if (legNum == 3)
         Leg->motor2.angle -= 19;
+            /*
     else if (legNum == 4)
         Leg->motor2.angle += 5;
     else if (legNum == 5)
         Leg->motor3.angle -= 5;
+*/
 }
 
 // wait for given leg
@@ -388,17 +391,17 @@ void readMessage()
             }
             else if (line->getItemAtIndex(0) == "Update height and width")
             {
-                buffer = arduinoHeight;
+                // buffer = arduinoHeight;
+                // buffer.concat(" -> ");
+                // arduinoHeight = line->getItemAtIndex(1).toFloat();
+                // buffer.concat(arduinoHeight);
+                // serialPrint(buffer);
+                buffer = addedHeight;
                 buffer.concat(" -> ");
-                arduinoHeight = line->getItemAtIndex(1).toFloat();
-                buffer.concat(arduinoHeight);
+                addedHeight = line->getItemAtIndex(2).toFloat()-100;
+                buffer.concat(addedHeight);
                 serialPrint(buffer);
-                buffer = arduinoWidth;
-                buffer.concat(" -> ");
-                arduinoWidth = line->getItemAtIndex(2).toFloat();
-                buffer.concat(arduinoWidth);
-                serialPrint(buffer);
-                mode = 4;
+                // mode = 4;
             }
             else if (line->getItemAtIndex(0) == "Speed change")
                 currentSpeed = (int)line->getItemAtIndex(1).toFloat();
@@ -418,27 +421,6 @@ void readMessage()
             }
             else if (line->getItemAtIndex(0) == "Stand")
                 mode = 3;
-            else if (line->getItemAtIndex(0) == "Sit")
-                mode = 8;
-            else if (line->getItemAtIndex(0) == "Pi")
-            {
-                if (line->getItemAtIndex(1) == "+")
-                    addedPi += 2;
-                else if (line->getItemAtIndex(1) == "-")
-                    addedPi -= 2;
-            }
-            else if (line->getItemAtIndex(0) == "Ro")
-            {
-                if (line->getItemAtIndex(1) == "+")
-                    addedRo += 2;
-                else if (line->getItemAtIndex(1) == "-")
-                    addedRo -= 2;
-            }
-            else if (line->getItemAtIndex(0) == "ResetPiRo")
-            {
-                addedRo = 0;
-                addedPi = 0;
-            }
         }
     }
 }
@@ -451,7 +433,7 @@ void sendMessage()
         String buffer;
         serialPrint("Sending data");
         buffer = "##width:";
-        buffer.concat(width);
+        buffer.concat(addedHeight+100);
         buffer.concat("##height:");
         buffer.concat(height);
         buffer.concat("##stop:");
@@ -491,8 +473,8 @@ void setup()
     allowPrint = false;     // after printing startup disable printing until recieving data from bluetooth
     mode = 3;               // start in standing mode
     steps = 10;             // number of steps in a movement from min to max angle
-    width = 100;            // width of gait
-    height = 90;            // height of gait
+    width = 90;            // width of gait
+    height = 100;            // height of gait
 }
 
 void loop()
@@ -507,20 +489,20 @@ void loop()
 
     switch (mode)
     {
-    case 8: // DEBUG: Stand on 3 legs
-        stance('n');
-        for (int i = 0; i < 6; i++)
-        {
-            leg *local_leg = &legSwitch(sequence[i]);
-            local_leg->D.x = width;
-            if (i % 2 == 0)
-                local_leg->D.z = height - addedHeight;
-            else
-                local_leg->D.z = height;
-            leg_angle(sequence[i]);
-            legWrite(local_leg, sequence[i]);
-        }
-        break;
+    // case 8: // DEBUG: Stand on 3 legs
+    //     stance('n');
+    //     for (int i = 1; i <= 6; i++)
+    //     {
+    //         leg *local_leg = &legSwitch(i);
+    //         local_leg->D.x = width;
+    //         if (i == 1 || i == 4 || i == 5)
+    //             local_leg->D.z = height - addedHeight;
+    //         else
+    //             local_leg->D.z = height;
+    //         leg_angle(i);
+    //         legWrite(local_leg, i);
+    //     }
+    //     break;
     case 1:
         // walk a bit
         for (int i = 0; i < 5; i++)
