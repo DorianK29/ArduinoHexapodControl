@@ -38,9 +38,8 @@ bool continuous; // move continuously
 bool allowPrint = true; // allow printing
 
 int sequence[6] = {3, 1, 6, 4, 2, 5}; // sequence of which the legs move when setting back to standing position
-// Mr Ki: tweak speed values
-int speed[6] = {0, 5, 20, 35, 50, 65}; // array of speed values
-int currentSpeed = 3;                  // array address values / -1
+int speed[6] = {1, 2, 3, 5, 50, 65};  // array of speed values
+int currentSpeed = 3;                 // array address values / -1
 
 float addedHeight = 20;
 float addedPi = 0;
@@ -55,27 +54,8 @@ bool stop = true;
 // bluetooth module pin
 int bluetooth = 44;
 
-// TEST: Try with min max values
 void initServo()
 {
-    // leg1.motor1.servo.attach(34, leg1.motor1.min, leg1.motor1.max);
-    // leg1.motor2.servo.attach(36, leg1.motor2.min, leg1.motor2.max);
-    // leg1.motor3.servo.attach(38, leg1.motor3.min, leg1.motor3.max);
-    // leg2.motor1.servo.attach(23, leg2.motor1.min, leg1.motor1.max);
-    // leg2.motor2.servo.attach(25, leg2.motor2.min, leg1.motor2.max);
-    // leg2.motor3.servo.attach(27, leg2.motor3.min, leg1.motor3.max);
-    // leg3.motor1.servo.attach(28, leg3.motor1.min, leg3.motor1.max);
-    // leg3.motor2.servo.attach(30, leg3.motor2.min, leg3.motor2.max);
-    // leg3.motor3.servo.attach(32, leg3.motor3.min, leg3.motor3.max);
-    // leg4.motor1.servo.attach(29, leg4.motor1.min, leg4.motor1.max);
-    // leg4.motor2.servo.attach(31, leg4.motor2.min, leg4.motor2.max);
-    // leg4.motor3.servo.attach(33, leg4.motor3.min, leg4.motor3.max);
-    // leg5.motor1.servo.attach(22, leg5.motor1.min, leg5.motor1.max);
-    // leg5.motor2.servo.attach(24, leg5.motor2.min, leg5.motor2.max);
-    // leg5.motor3.servo.attach(26, leg5.motor3.min, leg5.motor3.max);
-    // leg6.motor1.servo.attach(35, leg6.motor1.min, leg6.motor1.max);
-    // leg6.motor2.servo.attach(37, leg6.motor2.min, leg6.motor2.max);
-    // leg6.motor3.servo.attach(39, leg6.motor3.min, leg6.motor3.max);
     leg1.motor1.servo.attach(34);
     leg1.motor2.servo.attach(36);
     leg1.motor3.servo.attach(38);
@@ -215,7 +195,6 @@ void move()
             // after calculating the needed leg angles
             // change them to degrees so they can be compared to their minimal and maximal values
             local_leg->motorRadToDeg();
-            // TODO: min and max values changed big sad maybe no wrok?
             // if we have reached the maximal or minimal point of motor1's movement range
             // switch which legs are in the air and change which legs are going backwards
             if (local_leg->motor1.angle > local_leg->motor1.max || local_leg->motor1.angle < local_leg->motor1.min)
@@ -259,15 +238,14 @@ void angleFix(int legNum)
 
     Leg->motor3.angle = abs(Leg->motor3.angle);
     Leg->motor1.angle = 90 - Leg->motor1.angle;
-    // Mr Ki: 
 
     if (legNum == 3)
         Leg->motor2.angle -= 19;
-            /*
-    else if (legNum == 4)
-        Leg->motor2.angle += 5;
-    else if (legNum == 5)
-        Leg->motor3.angle -= 5;
+    /*
+else if (legNum == 4)
+Leg->motor2.angle += 5;
+else if (legNum == 5)
+Leg->motor3.angle -= 5;
 */
 }
 
@@ -336,7 +314,7 @@ void legWrite(leg *Leg, int legNum)
     // wait for the servo to reach the calculated angle
     servoWait(legNum);
 
-    angleFix(legNum); // Mr Ki: try remove
+    angleFix(legNum);
 }
 
 // write calculated values to all legs
@@ -391,17 +369,17 @@ void readMessage()
             }
             else if (line->getItemAtIndex(0) == "Update height and width")
             {
-                // buffer = arduinoHeight;
-                // buffer.concat(" -> ");
-                // arduinoHeight = line->getItemAtIndex(1).toFloat();
-                // buffer.concat(arduinoHeight);
-                // serialPrint(buffer);
-                buffer = addedHeight;
+                buffer = arduinoHeight;
                 buffer.concat(" -> ");
-                addedHeight = line->getItemAtIndex(2).toFloat()-100;
-                buffer.concat(addedHeight);
+                arduinoHeight = line->getItemAtIndex(1).toFloat();
+                buffer.concat(arduinoHeight);
                 serialPrint(buffer);
-                // mode = 4;
+                buffer = arduinoWidth;
+                buffer.concat(" -> ");
+                arduinoWidth = line->getItemAtIndex(2).toFloat();
+                buffer.concat(arduinoWidth);
+                serialPrint(buffer);
+                mode = 4;
             }
             else if (line->getItemAtIndex(0) == "Speed change")
                 currentSpeed = (int)line->getItemAtIndex(1).toFloat();
@@ -433,7 +411,7 @@ void sendMessage()
         String buffer;
         serialPrint("Sending data");
         buffer = "##width:";
-        buffer.concat(addedHeight+100);
+        buffer.concat(width);
         buffer.concat("##height:");
         buffer.concat(height);
         buffer.concat("##stop:");
@@ -473,8 +451,8 @@ void setup()
     allowPrint = false;     // after printing startup disable printing until recieving data from bluetooth
     mode = 3;               // start in standing mode
     steps = 10;             // number of steps in a movement from min to max angle
-    width = 90;            // width of gait
-    height = 100;            // height of gait
+    width = 90;             // width of gait
+    height = 100;           // height of gait
 }
 
 void loop()
@@ -484,25 +462,11 @@ void loop()
     sendMessage();
     readMessage();
 
-    if (stop) // TODO: stop button functionality
+    if (stop)
         return;
 
     switch (mode)
     {
-    // case 8: // DEBUG: Stand on 3 legs
-    //     stance('n');
-    //     for (int i = 1; i <= 6; i++)
-    //     {
-    //         leg *local_leg = &legSwitch(i);
-    //         local_leg->D.x = width;
-    //         if (i == 1 || i == 4 || i == 5)
-    //             local_leg->D.z = height - addedHeight;
-    //         else
-    //             local_leg->D.z = height;
-    //         leg_angle(i);
-    //         legWrite(local_leg, i);
-    //     }
-    //     break;
     case 1:
         // walk a bit
         for (int i = 0; i < 5; i++)
@@ -513,7 +477,6 @@ void loop()
         // continuous walk
         move();
         break;
-    // TODO: fix rapid movement on case 3 and 4
     case 3:
         // stand
         stance('n'); // set motor1 angles to their center value
@@ -611,39 +574,4 @@ void legValues()
     leg1.s1.z = leg2.s1.z = leg3.s1.z = leg4.s1.z = leg5.s1.z = leg6.s1.z = -16.3;
     leg1.s1.x = leg3.s1.x = leg5.s1.x = -23.5;
     leg2.s1.x = leg4.s1.x = leg6.s1.x = 23.5;
-
-    // TEST:
-    // TODO: will break program go to move if max :=)
-    /*
-    for (int i = 1; i <= 6; i++)
-        for (int j = 1; j <= 3; j++)
-        {
-            if (j != 3)
-            {
-                legSwitch(i).motorSwitch(j).min += 90;
-                legSwitch(i).motorSwitch(j).max += 90;
-            }
-            else
-            {
-                legSwitch(i).motorSwitch(j).min += 180;
-                legSwitch(i).motorSwitch(j).max += 180;
-            }
-
-            // print values to change code above :=
-            Serial.print("leg");
-            Serial.print(i);
-            Serial.print(".motor");
-            Serial.print(j);
-            Serial.print(".min = ");
-            Serial.print(legSwitch(i).motorSwitch(j).min);
-            Serial.print(";\n");
-
-            Serial.print("leg");
-            Serial.print(i);
-            Serial.print(".motor");
-            Serial.print(j);
-            Serial.print(".max = ");
-            Serial.print(legSwitch(i).motorSwitch(j).max);
-            Serial.print(";\n");
-        } */
 }
